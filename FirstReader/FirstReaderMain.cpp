@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "..\Source\Utils.h"
 #include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedMemory.h"
 
 static int g_iPID = 0;
 static int g_iLastTag = 0;
@@ -115,37 +116,43 @@ int main()
 	//RegisterWaitForSingleObject(&xEvent, hTimer, (WAITORTIMERCALLBACK)CDR, NULL, INFINITE, WT_EXECUTEDEFAULT);
 	//WaitKeyPress(3);
 
-	long long llSharedMemMaxSize = SHARED_MEMORY_MAX_SIZE;
+	RM_SharedMemory xSharedMemory;
+	const void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
+	RM_SharedMemory xSharedMemoryLabels;
+	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
+	
+	//long long llSharedMemMaxSize = SHARED_MEMORY_MAX_SIZE;
+	//
+	//TCHAR szName[] = TEXT(SHARED_MEMORY_NAME);
+	////GUGU!!! - FILE_MAP_ALL_ACCESS - I need 2 shared memories :((
+	//HANDLE hMapFile = OpenFileMapping(
+	//	FILE_MAP_ALL_ACCESS,			// read access
+	//	FALSE,                 // do not inherit the name
+	//	szName);               // name of mapping object
+	//
+	//if (hMapFile == nullptr)
+	//{
+	//	printf("First Reader: Failed to open file mapping object (%d).\n", GetLastError());
+	//	WaitKeyPress(3);
+	//	return S_FALSE;
+	//}
+	//
+	//LPCTSTR pSharedMemory = (LPTSTR)MapViewOfFile(hMapFile,   // handle to map object
+	//	FILE_MAP_ALL_ACCESS, // read permission
+	//	0,
+	//	0,
+	//	llSharedMemMaxSize);
+	//
+	//if (pSharedMemory == nullptr)
+	//{
+	//	printf("pid [%d] Failed to map shared memory! Quitting. \n", g_iPID);
+	//	CloseHandle(hMapFile);
+	//	WaitKeyPress(3);
+	//	return S_FALSE;
+	//}
 
-	TCHAR szName[] = TEXT(SHARED_MEMORY_NAME);
-	//GUGU!!! - FILE_MAP_ALL_ACCESS - I need 2 shared memories :((
-	HANDLE hMapFile = OpenFileMapping(
-		FILE_MAP_ALL_ACCESS,			// read access
-		FALSE,                 // do not inherit the name
-		szName);               // name of mapping object
-
-	if (hMapFile == nullptr)
-	{
-		printf("First Reader: Failed to open file mapping object (%d).\n", GetLastError());
-		WaitKeyPress(3);
-		return S_FALSE;
-	}
-
-	LPCTSTR pSharedMemory = (LPTSTR)MapViewOfFile(hMapFile,   // handle to map object
-		FILE_MAP_ALL_ACCESS, // read permission
-		0,
-		0,
-		llSharedMemMaxSize);
-
-	if (pSharedMemory == nullptr)
-	{
-		printf("pid [%d] Failed to map shared memory! Quitting. \n", g_iPID);
-		CloseHandle(hMapFile);
-		WaitKeyPress(3);
-		return S_FALSE;
-	}
-
-	SharedBuffer xSharedBuffer(const_cast<WCHAR*>(pSharedMemory));
+	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));
 	
 
 
@@ -155,9 +162,11 @@ int main()
 	WaitKeyPress(3);
 	//ConsoleKeyInfo cki = Console::ReadKey();
 	
+	xSharedMemory.CloseMemory();
+	xSharedMemoryLabels.CloseMemory();
 
-	UnmapViewOfFile(pSharedMemory);
-	CloseHandle(hMapFile);
+	//UnmapViewOfFile(pSharedMemory);
+	//CloseHandle(hMapFile);
 
 	
 
