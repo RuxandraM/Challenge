@@ -149,8 +149,12 @@
     <ClCompile Include="..\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Source\RM_Process.h" />
+    <ClInclude Include="..\Source\RM_SharedMemory.h" />
     <ClInclude Include="..\Source\SharedBuffer.h" />
     <ClInclude Include="..\Source\Utils.h" />
+    <ClInclude Include="..\Source\Win10\Platform_Process.h" />
+    <ClInclude Include="..\Source\Win10\Platform_Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

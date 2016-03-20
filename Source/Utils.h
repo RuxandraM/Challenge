@@ -1,8 +1,6 @@
-#ifndef NANOPORE_CHALLENGE_UTILS
-#define NANOPORE_CHALLENGE_UTILS
+#ifndef CHALLENGE_RM_UTILS
+#define CHALLENGE_RM_UTILS
 
-#include <windows.h>
-#include <process.h>
 #include <atomic>
 
 typedef unsigned int u_int;
@@ -27,77 +25,31 @@ struct SegmentInfo
 #define SEGMENT_SIZE 1000000
 #define NUM_SEGMENTS 10
 
-#define SHARED_MEMORY_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * (sizeof(SegmentInfo) + SEGMENT_SIZE))
+#define SHARED_MEMORY_LABESLS_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * sizeof(SegmentInfo))
+#define SHARED_MEMORY_LABESLS_NAME "NanoporeChallengeSharedMemoryLabesls"
+
+#define SHARED_MEMORY_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * SEGMENT_SIZE)
 #define SHARED_MEMORY_NAME "NanoporeChallengeSharedMemory"
 #define CHALLENGE_EVENT L"ChallengeEvent"
 
 
-#include <iostream>
-static void WaitKeyPress(int iKey)
+
+
+enum RM_ACCESS_FLAG
 {
-	//system("pause");
-	std::cin.clear();
-	int iInput = 0;
-	while (iInput != iKey)
-	{
-		std::cin >> iInput;
-	}
-}
-
-
-class CustomProcess
-{
-public:
-	HRESULT Initialise(const WCHAR* szExecutable, HANDLE xMainJobHandle)
-	{
-		u_int uLen = static_cast<u_int>(wcslen(szExecutable));
-		if (uLen >= 32) return S_FALSE;
-
-		//add a process that writes data to the shared buffer
-		STARTUPINFO xStartupInfo = {};
-
-		xStartupInfo.cb = sizeof(STARTUPINFO);
-
-		TCHAR lpszClientPath[32];
-		memcpy(lpszClientPath, szExecutable, uLen * sizeof(WCHAR));
-		lpszClientPath[uLen] = '\0';
-
-		DWORD xFlags = NORMAL_PRIORITY_CLASS | CREATE_UNICODE_ENVIRONMENT;
-		if (!xMainJobHandle)
-		{
-			xFlags |= CREATE_NEW_PROCESS_GROUP;
-		}
-
-		if (!CreateProcess(nullptr, lpszClientPath, nullptr, nullptr, FALSE,
-			NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT,
-			//xFlags,
-			nullptr, nullptr, &xStartupInfo, &m_xProcessInfo))
-		{
-			printf("Create Process %Ls Failed \n", szExecutable);
-			return S_FALSE;
-		}
-
-		if (!xMainJobHandle)
-		{
-			return S_OK;
-		}
-
-		if (!AssignProcessToJobObject(xMainJobHandle, m_xProcessInfo.hProcess))
-		{
-			printf("AssignProcessToJobObject Failed \n");
-			return S_FALSE;
-		}
-
-		return S_OK;
-	}
-
-	void Close()
-	{
-		CloseHandle(m_xProcessInfo.hProcess);
-	}
-
-private:
-
-	PROCESS_INFORMATION m_xProcessInfo;
+	RM_ACCESS_NO_ACCESS = 0,
+	RM_ACCESS_READ = 1,
+	RM_ACCESS_WRITE = 2,
 };
-#endif//NANOPORE_CHALLENGE_UTILS
+
+enum RM_RETURN_CODE
+{
+	RM_SUCCESS,
+	RM_CUSTOM_ERR1,
+	RM_CUSTOM_ERR2,
+	RM_CUSTOM_ERR3,//..
+};
+
+static void WaitKeyPress(int iKey);
+
+#endif//CHALLENGE_RM_UTILS

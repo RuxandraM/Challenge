@@ -1,5 +1,5 @@
-#ifndef NANOPORE_CHALLENGE_SHARED_BUFFER
-#define NANOPORE_CHALLENGE_SHARED_BUFFER
+#ifndef CHALLENGE_RM_SHARED_BUFFER
+#define CHALLENGE_RM_SHARED_BUFFER
 
 #include "Utils.h"
 #include <atomic>
@@ -13,10 +13,10 @@ public:
 
 	~Segment() {}
 
-	void Initialise(char* pMemory)
+	void Initialise(char* pMemory, char* pLabelMemory)
 	{
-		m_pSegmentInfo = reinterpret_cast<SegmentInfo*>(pMemory);
-		m_pMemory = pMemory + sizeof(SegmentInfo);
+		m_pSegmentInfo = reinterpret_cast<SegmentInfo*>(pLabelMemory);
+		m_pMemory = pMemory;
 	}
 
 	void Shutdown() {}
@@ -30,7 +30,8 @@ public:
 		m_pSegmentInfo->m_iWriteRequestSet = 0;
 	}
 
-	static long long GetTotalSizeFromBuffer() { return sizeof(SegmentInfo) + SEGMENT_SIZE; }
+	static long long GetMemoryBufferSize() { return SEGMENT_SIZE; }
+	static long long GetLabelSize() { return sizeof(SegmentInfo); }
 
 	bool AddWriteRequest()
 	{
@@ -89,13 +90,14 @@ private:
 class SharedBuffer
 {
 public:
-	SharedBuffer(void* pMemory) : m_pxLables(nullptr), m_pSegments(nullptr)
+	SharedBuffer(void* pMemory, void* pLabelsMemory) : m_pxLables(nullptr), m_pSegments(nullptr)
 	{
-		//map pMemory to the layout of this class
-		m_pxLables = reinterpret_cast<SharedLabels*>(pMemory);
+		//map pMemory and pLabelsMemory to the layout of this class
+		m_pxLables = reinterpret_cast<SharedLabels*>(pLabelsMemory);
 
 		//offset by shared labels
-		char* pCurrentMemPtr = reinterpret_cast<char*>(pMemory) + sizeof(SharedLabels);
+		char* pCurrentMemPtr = reinterpret_cast<char*>(pMemory);
+		char* pCurrentLabelPtr = reinterpret_cast<char*>(pLabelsMemory) + sizeof(SharedLabels);
 
 		m_pSegments = new Segment[NUM_SEGMENTS];
 		
@@ -103,8 +105,9 @@ public:
 		//loop through all the segments to initialise them
 		while ((m_pSegments + NUM_SEGMENTS) - pSeg > 0)
 		{
-			pSeg->Initialise(pCurrentMemPtr);
-			pCurrentMemPtr += Segment::GetTotalSizeFromBuffer();
+			pSeg->Initialise(pCurrentMemPtr, pCurrentLabelPtr);
+			pCurrentMemPtr += Segment::GetMemoryBufferSize();
+			pCurrentLabelPtr += Segment::GetLabelSize();
 			++pSeg;
 		}
 	}
@@ -198,4 +201,4 @@ private:
 	Segment* m_pSegments;
 };
 
-#endif//NANOPORE_CHALLENGE_SHARED_BUFFER
+#endif//CHALLENGE_RM_SHARED_BUFFER

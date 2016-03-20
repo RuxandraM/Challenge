@@ -2,6 +2,7 @@
 #include <windows.h>
 #include "..\Source\Utils.h"
 #include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedMemory.h"
 
 static int g_iPID = 0;
 static int g_uTag = 0;
@@ -23,49 +24,18 @@ int main()
 	g_iPID = _getpid();
 	printf("Writing to console pid %d \n", g_iPID);
 	HANDLE xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, CHALLENGE_EVENT);
+
+	RM_SharedMemory xSharedMemory;
+	const void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
+	RM_SharedMemory xSharedMemoryLabels;
+	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE|RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
-
-	long long llSharedMemMaxSize = SHARED_MEMORY_MAX_SIZE;
-
-	TCHAR szName[] = TEXT(SHARED_MEMORY_NAME);
-	//HANDLE hMapFile = CreateFileMapping(
-	//	INVALID_HANDLE_VALUE,    // invalid means to share just memory, not a file
-	//	NULL,                    // default security
-	//	PAGE_READWRITE,          // read/write access
-	//	0,                       // maximum object size (high-order DWORD)
-	//	llSharedMemMaxSize,		 // maximum object size (low-order DWORD)
-	//	szName);                 // name of mapping object
-
-	HANDLE hMapFile = OpenFileMapping(
-		FILE_MAP_ALL_ACCESS,   // read/write access
-		FALSE,                 // do not inherit the name
-		szName);               // name of mapping object
-
-	if (hMapFile == nullptr)
-	{
-		printf("[%d] Writer: Failed to open file mapping object (%d).\n", g_iPID,GetLastError());
-		WaitKeyPress(1);
-		return S_FALSE;
-	}
-
-	LPCTSTR pSharedMemory = (LPTSTR)MapViewOfFile(hMapFile,   // handle to map object
-		FILE_MAP_WRITE, // read/write permission
-		0,
-		0,
-		llSharedMemMaxSize);
-
-	if (pSharedMemory == nullptr)
-	{
-		printf("[%d] Writer: Failed to map shared memory! Quitting. \n", g_iPID);
-		CloseHandle(hMapFile);
-		WaitKeyPress(1);
-		return S_FALSE;
-	}
 
 	printf("[%d] Writer initialised. Waiting key press to start... \n", g_iPID);
 	WaitKeyPress(1);
 
-	SharedBuffer xSharedBuffer(const_cast<WCHAR*>(pSharedMemory));
+	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));
 	xSharedBuffer.ClearFlags();
 
 	//Segment xTemporarySegment;
@@ -111,11 +81,8 @@ int main()
 	printf("Finished writing to the shared memory \n");
 	WaitKeyPress(1);
 
-	UnmapViewOfFile(pSharedMemory);
-
-	CloseHandle(hMapFile);
-
-	
+	//xSharedMemory.CloseMemory();
+	//xSharedMemoryLabels.CloseMemory();
 
 	return S_OK;
 }
