@@ -3,10 +3,12 @@
 #include "..\Source\Utils.h"
 #include "..\Source\SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
+#include "..\Source\RM_MessageManager.h"
 
 static int g_iPID = 0;
 static int g_iLastTag = 0;
 static int g_iLastSegmentRead = 0;
+static int g_iProcessIndex = 1; //TODO: this is hardcoded; it should be sent at creation
 
 static void ReceivedSignal130(int signal)
 {
@@ -20,19 +22,25 @@ static void ReceivedSignal130(int signal)
 	}
 }
 
-static u_int g_uIsReading = 0;
 
-static void ReadData(SharedBuffer& xSharedBuffer, HANDLE xEvent)
+static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT>& xMessageManager)
 {
 	while (1)
 	{
-		WaitForSingleObject(xEvent, INFINITE);
-		//if (g_uIsReading) continue;
-		g_uIsReading = 1;
-		int iWriteTag = xSharedBuffer.GetTimestamp();
-		//printf("Received signal with timestamp %d \n",iWriteTag);
+		int iWriteTag = xMessageManager.BlockingReceive(g_iProcessIndex);
 		int iSegmentWritten = xSharedBuffer.GetLastSegmentWrittenIndex();
 		printf("Received signal for segment %d \n", iSegmentWritten);
+
+		if (iWriteTag - g_iLastTag >= NUM_SEGMENTS)
+		{
+			//we lost data. The writer was too quick and I wasn't listening for new events because I was busy writing out data
+			//attempt to read all the data from the buffer
+			g_iLastSegmentRead = (iSegmentWritten + 1) % NUM_SEGMENTS;
+		}
+		
+		//int iWriteTag = xSharedBuffer.GetTimestamp();
+		//printf("Received signal with timestamp %d \n",iWriteTag);
+		
 
 		//I was signalled that there is some data to read
 		int uCurrentSegment = g_iLastSegmentRead;
@@ -78,7 +86,7 @@ static void ReadData(SharedBuffer& xSharedBuffer, HANDLE xEvent)
 		printf("------------------- Read %d iterations, last read %d \n", uGUGU, uCurrentSegment);
 		g_iLastTag = iWriteTag;
 		g_iLastSegmentRead = uCurrentSegment;
-		g_uIsReading = 0;
+		//g_uIsReading = 0;
 		//g_uLastTimestamp = iWriteTag;
 	}
 #if GUGU_OLD
@@ -111,7 +119,7 @@ int main()
 	g_iPID = _getpid();
 	printf("[%d] First Reader initialised. Waiting key press to start... \n", g_iPID);
 	//signal(SIGINT, ReceivedSignal130);
-	HANDLE xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, CHALLENGE_EVENT);
+	//HANDLE xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, CHALLENGE_EVENT);
 	//WaitForSingleObject(xEvent, INFINITE);
 	//RegisterWaitForSingleObject(&xEvent, hTimer, (WAITORTIMERCALLBACK)CDR, NULL, INFINITE, WT_EXECUTEDEFAULT);
 	//WaitKeyPress(3);
@@ -122,53 +130,20 @@ int main()
 	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
-	//long long llSharedMemMaxSize = SHARED_MEMORY_MAX_SIZE;
-	//
-	//TCHAR szName[] = TEXT(SHARED_MEMORY_NAME);
-	////GUGU!!! - FILE_MAP_ALL_ACCESS - I need 2 shared memories :((
-	//HANDLE hMapFile = OpenFileMapping(
-	//	FILE_MAP_ALL_ACCESS,			// read access
-	//	FALSE,                 // do not inherit the name
-	//	szName);               // name of mapping object
-	//
-	//if (hMapFile == nullptr)
-	//{
-	//	printf("First Reader: Failed to open file mapping object (%d).\n", GetLastError());
-	//	WaitKeyPress(3);
-	//	return S_FALSE;
-	//}
-	//
-	//LPCTSTR pSharedMemory = (LPTSTR)MapViewOfFile(hMapFile,   // handle to map object
-	//	FILE_MAP_ALL_ACCESS, // read permission
-	//	0,
-	//	0,
-	//	llSharedMemMaxSize);
-	//
-	//if (pSharedMemory == nullptr)
-	//{
-	//	printf("pid [%d] Failed to map shared memory! Quitting. \n", g_iPID);
-	//	CloseHandle(hMapFile);
-	//	WaitKeyPress(3);
-	//	return S_FALSE;
-	//}
+	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT> xMessageManager;
+	xMessageManager.Initialise(g_iPID);
 
 	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));
 	
 
 
-	ReadData(xSharedBuffer,xEvent);
+	ReadData(xSharedBuffer, xMessageManager);
 
 	printf("First Reader done. Waiting key press to start... \n");
 	WaitKeyPress(3);
-	//ConsoleKeyInfo cki = Console::ReadKey();
 	
-	xSharedMemory.CloseMemory();
-	xSharedMemoryLabels.CloseMemory();
-
-	//UnmapViewOfFile(pSharedMemory);
-	//CloseHandle(hMapFile);
-
-	
+	//xSharedMemory.CloseMemory();
+	//xSharedMemoryLabels.CloseMemory();
 
 	return S_OK;
 }

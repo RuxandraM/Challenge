@@ -9,54 +9,11 @@ public:
 	RM_RETURN_CODE Initialise(const WCHAR* szExecutable)
 	{
 		return m_xCustomProcess.Initialise(szExecutable);
-
-		/*
-		u_int uLen = static_cast<u_int>(wcslen(szExecutable));
-		if (uLen >= 32) return S_FALSE;
-
-		//add a process that writes data to the shared buffer
-		STARTUPINFO xStartupInfo = {};
-
-		xStartupInfo.cb = sizeof(STARTUPINFO);
-
-		TCHAR lpszClientPath[32];
-		memcpy(lpszClientPath, szExecutable, uLen * sizeof(WCHAR));
-		lpszClientPath[uLen] = '\0';
-
-		DWORD xFlags = NORMAL_PRIORITY_CLASS | CREATE_UNICODE_ENVIRONMENT;
-		if (!xMainJobHandle)
-		{
-		xFlags |= CREATE_NEW_PROCESS_GROUP;
-		}
-
-		if (!CreateProcess(nullptr, lpszClientPath, nullptr, nullptr, FALSE,
-		NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT,
-		//xFlags,
-		nullptr, nullptr, &xStartupInfo, &m_xProcessInfo))
-		{
-		printf("Create Process %Ls Failed \n", szExecutable);
-		return S_FALSE;
-		}
-
-		if (!xMainJobHandle)
-		{
-		return S_OK;
-		}
-
-		if (!AssignProcessToJobObject(xMainJobHandle, m_xProcessInfo.hProcess))
-		{
-		printf("AssignProcessToJobObject Failed \n");
-		return S_FALSE;
-		}
-
-		return S_OK;
-		*/
 	}
 
 	void Close() const
 	{
 		m_xCustomProcess.Platform_Close();
-		//CloseHandle(m_xProcessInfo.hProcess);
 	}
 
 	const Platform_CustomProcess* GetPlatformProcess() const { return &m_xCustomProcess; }

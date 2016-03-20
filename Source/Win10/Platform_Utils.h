@@ -48,7 +48,7 @@ public:
 	}
 
 	//flags can be RM_ACCESS_FLAG
-	const void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
+	void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
 	{
 		DWORD xPlatformAccessFlag = 0;
 		if ((uFlags & RM_ACCESS_READ) &&
@@ -94,7 +94,7 @@ public:
 			return nullptr;
 		}
 
-		return pSharedMemory;
+		return (void*)pSharedMemory;
 	}
 
 	void CloseMemory()

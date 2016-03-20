@@ -3,9 +3,11 @@
 #include "..\Source\Utils.h"
 #include "..\Source\SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
+#include "..\Source\RM_MessageManager.h"
 
 static int g_iPID = 0;
 static int g_uTag = 0;
+static int g_iProcessIndex = 0;	//TODO: this is hardcoded; it should be sent at creation
 
 static void ReceivedSignal130(int signal)
 {
@@ -23,19 +25,20 @@ int main()
 {
 	g_iPID = _getpid();
 	printf("Writing to console pid %d \n", g_iPID);
-	HANDLE xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, CHALLENGE_EVENT);
-
-	RM_SharedMemory xSharedMemory;
-	const void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
-	RM_SharedMemory xSharedMemoryLabels;
-	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE|RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
-		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
+	RM_SharedMemory xSharedMemory;
+	void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
+	RM_SharedMemory xSharedMemoryLabels;
+	void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE|RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
+	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT> xMessageManager;
+	xMessageManager.Initialise(g_iPID);
 
-	printf("[%d] Writer initialised. Waiting key press to start... \n", g_iPID);
+
+	printf("[%d] Writer initialised. Waiting key press (1) to start... \n", g_iPID);
 	WaitKeyPress(1);
 
-	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));
+	SharedBuffer xSharedBuffer(pSharedMemory, pSharedMemoryLabels);
 	xSharedBuffer.ClearFlags();
 
 	//Segment xTemporarySegment;
@@ -64,8 +67,9 @@ int main()
 			*pCurrentPtr = cCurrentIterationVal;
 			++pCurrentPtr;
 		}
-		xSharedBuffer.SetFinishedWriting(uCurrentSegment,++g_uTag);
-		SetEvent(xEvent);
+		xSharedBuffer.SetFinishedWriting(uCurrentSegment,g_uTag);
+		xMessageManager.SendMessage(-1, g_iProcessIndex, (int)(++g_uTag));
+		
 		cCurrentIterationVal++;
 
 		//GUGU - the trigger time must be 1 second after we start writing!
@@ -76,13 +80,9 @@ int main()
 	//raise(SIGINT);
 	
 	
-	//SetEvent(xEvent);
 
 	printf("Finished writing to the shared memory \n");
 	WaitKeyPress(1);
-
-	//xSharedMemory.CloseMemory();
-	//xSharedMemoryLabels.CloseMemory();
 
 	return S_OK;
 }

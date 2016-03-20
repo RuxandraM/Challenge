@@ -5,6 +5,7 @@ VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NanoporeChallenge", "NanoporeChallenge\NanoporeChallenge.vcxproj", "{038BF909-B715-4F49-89BF-F5FC6030105C}"
 	ProjectSection(ProjectDependencies) = postProject
+		{64113550-9FB9-4960-AF77-EDF487EC211A} = {64113550-9FB9-4960-AF77-EDF487EC211A}
 		{9B2E157B-6B99-4285-B1FE-71D0357CD086} = {9B2E157B-6B99-4285-B1FE-71D0357CD086}
 		{193533A7-7D71-4AA2-9FCD-F67FE1B23E8E} = {193533A7-7D71-4AA2-9FCD-F67FE1B23E8E}
 	EndProjectSection
@@ -12,6 +13,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Writer", "Writer\Writer.vcxproj", "{193533A7-7D71-4AA2-9FCD-F67FE1B23E8E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FirstReader", "FirstReader\FirstReader.vcxproj", "{9B2E157B-6B99-4285-B1FE-71D0357CD086}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SecondReader", "SecondReader\SecondReader.vcxproj", "{64113550-9FB9-4960-AF77-EDF487EC211A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +48,14 @@ Global
 		{9B2E157B-6B99-4285-B1FE-71D0357CD086}.Release|x64.Build.0 = Release|x64
 		{9B2E157B-6B99-4285-B1FE-71D0357CD086}.Release|x86.ActiveCfg = Release|Win32
 		{9B2E157B-6B99-4285-B1FE-71D0357CD086}.Release|x86.Build.0 = Release|Win32
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Debug|x64.ActiveCfg = Debug|x64
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Debug|x64.Build.0 = Debug|x64
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Debug|x86.ActiveCfg = Debug|Win32
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Debug|x86.Build.0 = Debug|Win32
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Release|x64.ActiveCfg = Release|x64
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Release|x64.Build.0 = Release|x64
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Release|x86.ActiveCfg = Release|Win32
+		{64113550-9FB9-4960-AF77-EDF487EC211A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

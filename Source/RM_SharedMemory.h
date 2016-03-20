@@ -12,7 +12,7 @@ public:
 		return m_xPlatformMem.CreateMemory(uFlags, llSharedMemMaxSize, szName, uPID);
 	}
 
-	const void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
+	void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
 	{
 		return m_xPlatformMem.OpenMemory(uFlags, llSharedMemMaxSize, szName, uPID);
 	}

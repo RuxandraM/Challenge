@@ -30,10 +30,16 @@ struct SegmentInfo
 
 #define SHARED_MEMORY_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * SEGMENT_SIZE)
 #define SHARED_MEMORY_NAME "NanoporeChallengeSharedMemory"
-#define CHALLENGE_EVENT L"ChallengeEvent"
+#define CHALLENGE_EVENT_NAME "ChallengeEvent"
 
 
-
+enum RM_CHALLENGE_PROCESS
+{
+	RM_CHALLENGE_PROCESS_WRITER,
+	RM_CHALLENGE_PROCESS_FIRSTREADER,
+	RM_CHALLENGE_PROCESS_SECONDREADER,
+	RM_CHALLENGE_PROCESS_COUNT
+};
 
 enum RM_ACCESS_FLAG
 {
@@ -51,5 +57,53 @@ enum RM_RETURN_CODE
 };
 
 static void WaitKeyPress(int iKey);
+
+void itostr(int iNumber, char buf[33])
+{
+	//char c = 0x0;
+	//int sign = 0;
+	//int i, end, top;
+	//end = top = 32;
+	u_int uCurrentDigit = 0;
+	char *pCurrentDigit = buf;
+	if (iNumber < 0) 
+	{
+		buf[0] = '-';
+		iNumber *= -1;
+		++pCurrentDigit;
+	}
+
+	if (iNumber == 0)
+	{
+		buf[0] = '0';
+		buf[1] = '\0';
+		return;
+	}
+
+	//TODO: it is reveresed, but it doesn't matter here
+	while (iNumber)
+	{
+		int iDigit = iNumber % 10;
+		*pCurrentDigit++ = (iDigit + '0');
+		++uCurrentDigit;
+		iNumber /= 10;
+	}
+	buf[uCurrentDigit] = '\0';
+
+	//for (i = x; i != 0; i /= 10) {
+	//	c |= 0x03;
+	//	c <<= 4;
+	//	c |= i % 10;
+	//	buf[top--] = c;
+	//	c = 0x0;
+	//}
+	//if (sign)
+	//	buf[0] = '-';
+	//for (i = sign; top < end; i++)
+	//	buf[i] = buf[++top];
+	//buf[i] = '\0';
+	
+	return;
+}
 
 #endif//CHALLENGE_RM_UTILS
