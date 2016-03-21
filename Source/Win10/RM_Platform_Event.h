@@ -55,6 +55,8 @@ public:
 	void Platform_BlcokingWait()
 	{
 		WaitForSingleObject(m_xEvent, INFINITE);
+		//GUGU!!! - do I need this?
+		ResetEvent(m_xEvent);
 	}
 
 	void Platform_Shutdown()

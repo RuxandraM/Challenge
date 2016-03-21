@@ -58,7 +58,7 @@ enum RM_RETURN_CODE
 
 static void WaitKeyPress(int iKey);
 
-void itostr(int iNumber, char buf[33])
+static void itostr(int iNumber, char buf[33])
 {
 	//char c = 0x0;
 	//int sign = 0;

@@ -90,6 +90,32 @@ private:
 class SharedBuffer
 {
 public:
+
+	SharedBuffer() :m_pSegments(nullptr), m_pxLables(nullptr) {}
+
+	void Initialise(void* pMemory, void* pLabelsMemory)
+	{
+		//map pMemory and pLabelsMemory to the layout of this class
+		m_pxLables = reinterpret_cast<SharedLabels*>(pLabelsMemory);
+
+		//offset by shared labels
+		char* pCurrentMemPtr = reinterpret_cast<char*>(pMemory);
+		char* pCurrentLabelPtr = reinterpret_cast<char*>(pLabelsMemory) + sizeof(SharedLabels);
+
+		m_pSegments = new Segment[NUM_SEGMENTS];
+
+		Segment* pSeg = m_pSegments;
+		//loop through all the segments to initialise them
+		while ((m_pSegments + NUM_SEGMENTS) - pSeg > 0)
+		{
+			pSeg->Initialise(pCurrentMemPtr, pCurrentLabelPtr);
+			pCurrentMemPtr += Segment::GetMemoryBufferSize();
+			pCurrentLabelPtr += Segment::GetLabelSize();
+			++pSeg;
+		}
+	}
+
+	//GUGU!!! delete me!!
 	SharedBuffer(void* pMemory, void* pLabelsMemory) : m_pxLables(nullptr), m_pSegments(nullptr)
 	{
 		//map pMemory and pLabelsMemory to the layout of this class

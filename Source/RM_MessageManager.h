@@ -1,3 +1,6 @@
+#ifndef CHALLENGE_RM_MESSAGE_MANAGER
+#define CHALLENGE_RM_MESSAGE_MANAGER
+
 #include "Utils.h"
 #include "RM_SharedMemory.h"
 #include "RM_Event.h"
@@ -115,3 +118,5 @@ private:
 	RM_MessageManagerSharedMemLayout<NUM_PROCESSES> m_xSharedMemoryLayout;
 	RM_SharedMemory m_xSharedMemory;
 };
+
+#endif//CHALLENGE_RM_MESSAGE_MANAGER
