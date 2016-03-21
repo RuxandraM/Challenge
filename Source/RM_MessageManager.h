@@ -48,14 +48,14 @@ public:
 	{
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].Create(u);
+			m_xEvents[u].CreateNamedEvent(u);
 		}
 
 		m_xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, MESSAGE_SHARED_MEMORY_MAX_SIZE, TEXT(MESSAGE_SHARED_MEMORY_NAME), iPID);
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].Create(u);
+			m_xEvents[u].CreateNamedEvent(u);
 		}
 	}
 
@@ -67,7 +67,7 @@ public:
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].Open(u);
+			m_xEvents[u].OpenNamedEvent(u);
 		}
 	}
 
@@ -82,14 +82,14 @@ public:
 				if (i != iFromProcessIndex)
 				{
 					m_xSharedMemoryLayout.SetToken(i, iToken);
-					m_xEvents[i].SendEvent();
+					m_xEvents[i].SetEvent();
 				}
 			}
 		}
 		else
 		{
 			m_xSharedMemoryLayout.SetToken(iToProcessIndex, iToken);
-			m_xEvents[iToProcessIndex].SendEvent();
+			m_xEvents[iToProcessIndex].SetEvent();
 		}
 	}
 

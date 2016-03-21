@@ -127,24 +127,32 @@ public:
 		RM_ThreadPool xThreadPool;
 		xThreadPool.Initialise(READER_NUM_POOLTHREADS, m_xThreadSharedParamGroup);
 
-		OutputThreadContext xContext(0, 0, 0);
-		xThreadPool.StartThreads(reinterpret_cast<void*>(&xContext));
+		//GUGU
+		//OutputThreadContext xContext(0, 0, 0);
+		xThreadPool.StartThreads();// reinterpret_cast<void*>(&xContext));
 	}
 
 	RM_RETURN_CODE ReadData()
 	{
 		//RM_Thread m_xListenerThread(m_xThreadSharedParamGroup);
 		//m_xListenerThread.Start();
+		m_uNumGroupSegments = 1 + std::rand() % READER_MAX_RANDOM_SEGMENTS;
 		//keep listening
 		while (true)
 		{
 			int iWriteTag = m_xMessageManager.BlockingReceive(g_iProcessIndex);
 			int iSegmentWritten = m_xSharedBuffer.GetLastSegmentWrittenIndex();
 			int iStagingSegmentIndex = m_xStagingBuffer.ReserveSegmentIfAvailable();
+			if (iStagingSegmentIndex == -1)
+			{
+				printf("Out of staging buffer space \n");
+				return RM_CUSTOM_ERR2;
+			}
 			//this will always return me a thread, it will create one if needed; if creation fails it means that something wrong has happened
 			RM_EventThread* pOutputThread = m_xThreadPool.GetThreadForActivation(m_xThreadSharedParamGroup);
 			if (!pOutputThread)
 			{
+				printf("No available threads \n");
 				return RM_CUSTOM_ERR1;
 			}
 			if (iStagingSegmentIndex != -1)
@@ -153,13 +161,13 @@ public:
 				OutputThreadContext xContext(iWriteTag, iSegmentWritten, iStagingSegmentIndex);
 				pOutputThread->ResetContext(reinterpret_cast<void*>(&xContext));
 				RM_Event* pxEvent = pOutputThread->GetEvent();
-				pxEvent->SendEvent();
+				pxEvent->SetEvent();
 			}
 			++m_uSegmentIndexInGroup;
 			if (m_uSegmentIndexInGroup == m_uNumGroupSegments)
 			{
 				//enqueue a reset function or so
-				m_uNumGroupSegments = std::rand() % READER_MAX_RANDOM_SEGMENTS;
+				m_uNumGroupSegments = 1 + std::rand() % READER_MAX_RANDOM_SEGMENTS;
 			}
 		}
 	}

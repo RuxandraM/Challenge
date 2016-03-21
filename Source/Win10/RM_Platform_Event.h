@@ -15,7 +15,7 @@ public:
 		Platform_Shutdown();
 	}
 
-	RM_RETURN_CODE Platform_Create(int iIndex)
+	RM_RETURN_CODE Platform_CreateNamedEvent(int iIndex)
 	{
 		char buff[33];
 		itostr(iIndex, buff);
@@ -34,7 +34,7 @@ public:
 		return RM_SUCCESS;
 	}
 
-	void Platform_Open(int iIndex)
+	void Platform_OpenNamedEvent(int iIndex)
 	{
 		char buff[33];
 		itostr(iIndex, buff);
@@ -47,16 +47,24 @@ public:
 		m_xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, wName.c_str());
 	}
 
-	void Platform_SendEvent()
+	void Platform_Create()
 	{
+		m_xEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	}
+
+	void Platform_SetEvent()
+	{
+		if (!m_xEvent) return;
 		SetEvent(m_xEvent);
 	}
 
-	void Platform_BlcokingWait()
+	bool Platform_BlcokingWait()
 	{
+		if (!m_xEvent) return false;
 		WaitForSingleObject(m_xEvent, INFINITE);
 		//GUGU!!! - do I need this?
-		ResetEvent(m_xEvent);
+		//ResetEvent(m_xEvent);
+		return true;
 	}
 
 	void Platform_Shutdown()

@@ -48,7 +48,11 @@ private:
 class RM_EventThread : public RM_Thread
 {
 public:
-	RM_EventThread() :m_bShouldTerminate(false) {}
+	RM_EventThread() :m_bShouldTerminate(false) 
+	{
+		m_xEvent.Create();
+	}
+	virtual ~RM_EventThread() {}
 
 	virtual void Execute(void *pParam) = 0;
 
@@ -56,7 +60,11 @@ public:
 	{
 		while (!m_bShouldTerminate)
 		{
-			m_xEvent.BlockingWait();
+			if (!m_xEvent.BlockingWait())
+			{
+				//error with the thread events
+				return 0;
+			}
 			Execute(pParam);
 		}
 		CleanUpBeforeTerminating();
@@ -69,7 +77,7 @@ public:
 	void StartShutdown()
 	{
 		m_bShouldTerminate = true;
-		m_xEvent.SendEvent();
+		m_xEvent.SetEvent();
 	}
 
 private:

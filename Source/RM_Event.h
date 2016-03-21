@@ -6,22 +6,28 @@
 class RM_Event
 {
 public:
-	void Create(int iIndex)
+	void CreateNamedEvent(int iIndex)
 	{
-		m_xPlatformEvent.Platform_Create(iIndex);
+		m_xPlatformEvent.Platform_CreateNamedEvent(iIndex);
 	}
-	void Open(int iIndex)
+	void OpenNamedEvent(int iIndex)
 	{
-		m_xPlatformEvent.Platform_Open(iIndex);
+		m_xPlatformEvent.Platform_OpenNamedEvent(iIndex);
+	}
+	
+	void Create()
+	{
+		m_xPlatformEvent.Platform_Create();
 	}
 
-	void SendEvent()
+	void SetEvent()
 	{
-		m_xPlatformEvent.Platform_SendEvent();
+		m_xPlatformEvent.Platform_SetEvent();
 	}
-	void BlockingWait()
+
+	bool BlockingWait()
 	{
-		m_xPlatformEvent.Platform_BlcokingWait();
+		return m_xPlatformEvent.Platform_BlcokingWait();
 	}
 private:
 	RM_Platform_Event m_xPlatformEvent;

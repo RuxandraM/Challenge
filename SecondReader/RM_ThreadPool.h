@@ -37,16 +37,24 @@ public:
 		//StartThreads();
 	}
 
-	void StartThreads(void* pContext)
+	void StartThreads()
 	{
 		for (ThreadListIt it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
 		{
-			RM_EventThread* pThread = *it;
-			pThread->ResetContext(pContext);
-			//launches the threads, putting them in the sleep state
-			pThread->Start();
+			(*it)->Start();
 		}
 	}
+
+	//void StartThreads(void* pContext)
+	//{
+	//	for (ThreadListIt it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
+	//	{
+	//		RM_EventThread* pThread = *it;
+	//		pThread->ResetContext(pContext);
+	//		//launches the threads, putting them in the sleep state
+	//		pThread->Start();
+	//	}
+	//}
 
 	void Shutdown()
 	{
