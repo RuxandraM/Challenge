@@ -102,6 +102,7 @@ public:
 		if (!pResultThread)
 		{
 			pResultThread = new RM_SR_OutputThread(xSharedParamsGroup);
+			pResultThread->Start();
 		}
 
 		m_xActivePoolMutex.Lock();

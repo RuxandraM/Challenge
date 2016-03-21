@@ -3,7 +3,6 @@
 
 void RM_SR_OutputThread::Execute(void* pParam)
 {
-	printf("launched the second reader threads \n");
 	if (m_xContext.IsDirty())
 	{
 		printf("ERR GUGU \n");

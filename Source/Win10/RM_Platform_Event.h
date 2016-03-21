@@ -49,6 +49,7 @@ public:
 
 	void Platform_Create()
 	{
+		//GUGU: manual reset to false?
 		m_xEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	}
 
