@@ -6,8 +6,8 @@
 #include "..\Source\RM_MessageManager.h"
 
 static int g_iPID = 0;
-static int g_iLastTag = 0;
-static int g_iLastSegmentRead = 0;
+static u_int g_uLastTag = 0u;
+static u_int g_uLastSegmentRead = 0u;
 static int g_iProcessIndex = 1; //TODO: this is hardcoded; it should be sent at creation
 
 static void ReceivedSignal130(int signal)
@@ -23,19 +23,28 @@ static void ReceivedSignal130(int signal)
 }
 
 
-static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT>& xMessageManager)
+static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData>& xMessageManager)
 {
 	while (1)
 	{
-		int iWriteTag = xMessageManager.BlockingReceive(g_iProcessIndex);
-		int iSegmentWritten = xSharedBuffer.GetLastSegmentWrittenIndex();
-		printf("Received signal for segment %d \n", iSegmentWritten);
+		RM_WToRMessageData xMessage;
+		RM_RETURN_CODE xResult = xMessageManager.BlockingReceive(g_iProcessIndex, &xMessage);
+		if (xResult != RM_SUCCESS)
+		{
+			printf("[%d] Failed to read signalled message.",g_iPID);
+			continue;	//go back and wait for other messages. It was a problem in the transmition medium
+		}
 
-		if (iWriteTag - g_iLastTag >= NUM_SEGMENTS)
+		//int iSegmentWritten = xSharedBuffer.GetLastSegmentWrittenIndex();
+		
+
+		printf("[%d] Received signal for segment %d \n",g_iPID, xMessage.m_uSegmentWritten);
+
+		if (xMessage.m_uTag - g_uLastTag >= NUM_SEGMENTS)
 		{
 			//we lost data. The writer was too quick and I wasn't listening for new events because I was busy writing out data
 			//attempt to read all the data from the buffer
-			g_iLastSegmentRead = (iSegmentWritten + 1) % NUM_SEGMENTS;
+			g_uLastSegmentRead = (xMessage.m_uSegmentWritten + 1) % NUM_SEGMENTS;
 		}
 		
 		//int iWriteTag = xSharedBuffer.GetTimestamp();
@@ -43,20 +52,24 @@ static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE
 		
 
 		//I was signalled that there is some data to read
-		int uCurrentSegment = g_iLastSegmentRead;
-		int uMaxNumIterations = iSegmentWritten >= g_iLastSegmentRead ?
-			iSegmentWritten - g_iLastSegmentRead :
-			NUM_SEGMENTS - g_iLastSegmentRead + iSegmentWritten;
+		u_int uCurrentSegment = g_uLastSegmentRead;
+		u_int uMaxNumIterations = xMessage.m_uSegmentWritten >= g_uLastSegmentRead ?
+			xMessage.m_uSegmentWritten - g_uLastSegmentRead :
+			NUM_SEGMENTS - g_uLastSegmentRead + xMessage.m_uSegmentWritten;
+		
 		u_int uGUGU = uMaxNumIterations;
-		while (uMaxNumIterations >= 0)
+		//read all the segments from the last one I read to the one I was messaged about,
+		//or the last N if the writer is too far ahead
+		while (uMaxNumIterations >= 0u)
 		{
 			--uMaxNumIterations;
-			int iSegmentTag = xSharedBuffer.GetSegmentTimestamp(uCurrentSegment);
-			if (iSegmentTag < g_iLastTag)
-			{
-				break;
-			}
-			//printf("Trying to read segment %d \n", uCurrentSegment);
+			u_int uSegmentTag = (u_int)xSharedBuffer.GetSegmentTimestamp(uCurrentSegment);
+			//GUGU - the writer will reset the u_int at some point
+			//if (uSegmentTag < g_uLastTag)
+			//{
+			//	break;
+			//}
+			
 			//---------------------------------------------------------
 			const char* pSegmentMemory = xSharedBuffer.GetSegmentForReading(uCurrentSegment);
 
@@ -84,8 +97,8 @@ static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE
 			uCurrentSegment = (uCurrentSegment + 1) % NUM_SEGMENTS;
 		}
 		printf("------------------- Read %d iterations, last read %d \n", uGUGU, uCurrentSegment);
-		g_iLastTag = iWriteTag;
-		g_iLastSegmentRead = uCurrentSegment;
+		g_uLastTag = xMessage.m_uTag;
+		g_uLastSegmentRead = uCurrentSegment;
 		//g_uIsReading = 0;
 		//g_uLastTimestamp = iWriteTag;
 	}
@@ -130,7 +143,7 @@ int main()
 	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
-	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT> xMessageManager;
+	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
 	xMessageManager.Initialise(g_iPID);
 
 	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));

@@ -6,7 +6,7 @@
 #include "..\Source\RM_MessageManager.h"
 
 static int g_iPID = 0;
-static int g_uTag = 0;
+static u_int g_uTag = 0u;
 static int g_iProcessIndex = 0;	//TODO: this is hardcoded; it should be sent at creation
 
 static void ReceivedSignal130(int signal)
@@ -31,7 +31,7 @@ int main()
 	RM_SharedMemory xSharedMemoryLabels;
 	void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE|RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
-	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT> xMessageManager;
+	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
 	xMessageManager.Initialise(g_iPID);
 
 
@@ -68,8 +68,25 @@ int main()
 			++pCurrentPtr;
 		}
 		xSharedBuffer.SetFinishedWriting(uCurrentSegment,g_uTag);
-		xMessageManager.SendMessage(-1, g_iProcessIndex, (int)(++g_uTag));
-		
+		RM_WToRMessageData xMessage = { g_uTag, uCurrentSegment };
+		RM_RETURN_CODE xResult = xMessageManager.SendMessage(-1, g_iProcessIndex, &xMessage);
+		if (xResult != RM_SUCCESS)
+		{
+			//wait a little and try again for a few times (say 10 times, this param can be exposed)
+			for (u_int u = 0; u < 10; ++u)
+			{
+				Sleep(5);
+				xResult = xMessageManager.SendMessage(-1, g_iProcessIndex, &xMessage);
+				if (xResult == RM_SUCCESS) break;
+			}
+			if (xResult != RM_SUCCESS)
+			{
+				printf("Failed to send message. The written data will never be read!");
+				//TODO: could try looking for new readers, or we could increase buffer sizes - 
+				//maybe the readers are too slow and fill up all the space?!
+			}
+		}
+
 		cCurrentIterationVal++;
 
 		//GUGU - the trigger time must be 1 second after we start writing!

@@ -19,7 +19,7 @@ int main()
 	RM_SharedMemory xSharedLabelsMemory;
 	xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
 	xSharedLabelsMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_LABESLS_MAX_SIZE, TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
-	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT> xMessageManager;
+	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
 	xMessageManager.Create(g_iPID);
 	
 	RM_Job xJob;

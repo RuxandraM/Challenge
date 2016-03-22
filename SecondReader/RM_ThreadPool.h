@@ -17,66 +17,49 @@
 struct ThreadSharedParamGroup;
 class RM_SR_OutputThread;
 
+//TThread must derive from RM_Thread
+template<typename TThread, typename TContext>
 class RM_ThreadPool
 {
 public:
-	void Initialise(u_int uNumThreads, ThreadSharedParamGroup& xSharedParamsGroup)
+	void Initialise(u_int uNumThreads, TContext* pContext)
 	{
-		//m_xSleepingThreads.reserve(uNumThreads);
-		//m_xActiveThreads.reserve(uNumThreads);
-		//m_xWakeUpEvents.reserve(uNumThreads);
-
 		m_xSleepingPoolMutex.Lock();
 		for (u_int u = 0; u < uNumThreads; ++u)
 		{
-			RM_EventThread* pOutputThread = new RM_SR_OutputThread(xSharedParamsGroup);
+			TThread* pOutputThread = new TThread(pContext);
 			m_xSleepingThreads.push_back(pOutputThread);
 		}
 		m_xSleepingPoolMutex.Unlock();
-
-		//StartThreads();
 	}
 
 	void StartThreads()
 	{
-		for (ThreadListIt it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
+		for (std::list<TThread*>::iterator it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
 		{
 			(*it)->Start();
 		}
 	}
 
-	//void StartThreads(void* pContext)
-	//{
-	//	for (ThreadListIt it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
-	//	{
-	//		RM_EventThread* pThread = *it;
-	//		pThread->ResetContext(pContext);
-	//		//launches the threads, putting them in the sleep state
-	//		pThread->Start();
-	//	}
-	//}
-
 	void Shutdown()
 	{
 		//terminate all the threads
 		m_xSleepingPoolMutex.Lock();
-		for (ThreadListIt it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
+		for (std::list<TThread*>::iterator it = m_xSleepingThreads.begin(); it != m_xSleepingThreads.end(); ++it)
 		{
-			RM_EventThread* pCurrentThread = *it;
-			pCurrentThread->StartShutdown();
+			(*it)->StartShutdown();
 		}
 		m_xSleepingPoolMutex.Unlock();
 
 		m_xActivePoolMutex.Lock();
-		for (ThreadListIt it = m_xActiveThreads.begin(); it != m_xActiveThreads.end(); ++it)
+		for (std::list<TThread*>::iterator it = m_xActiveThreads.begin(); it != m_xActiveThreads.end(); ++it)
 		{
-			RM_EventThread* pCurrentThread = *it;
-			pCurrentThread->StartShutdown();
+			(*it)->StartShutdown();
 		}
 		m_xActivePoolMutex.Unlock();
 	}
 
-	void ChangeThreadToSleeping(RM_EventThread* pCurrent)
+	void ChangeThreadToSleeping(TThread* pCurrent)
 	{
 		m_xActivePoolMutex.Lock();
 		m_xActiveThreads.remove(pCurrent);
@@ -87,9 +70,9 @@ public:
 		m_xSleepingPoolMutex.Unlock();
 	}
 
-	RM_EventThread* GetThreadForActivation(ThreadSharedParamGroup& xSharedParamsGroup)
+	TThread* GetThreadForActivation(TContext* pContext)
 	{
-		RM_EventThread* pResultThread = nullptr;
+		TThread* pResultThread = nullptr;
 		m_xSleepingPoolMutex.Lock();
 		size_t xSize = m_xSleepingThreads.size();
 		if (xSize != 0)
@@ -101,7 +84,7 @@ public:
 
 		if (!pResultThread)
 		{
-			pResultThread = new RM_SR_OutputThread(xSharedParamsGroup);
+			pResultThread = new TThread(pContext);
 			pResultThread->Start();
 		}
 
@@ -117,9 +100,8 @@ private:
 	RM_PlatformMutex m_xActivePoolMutex;
 	//TODO: either resize or change data type
 	//this is in danger of allocating memory every time we run out of threads in the sleeping pool
-	std::list<RM_EventThread*> m_xSleepingThreads;
-	std::list<RM_EventThread*> m_xActiveThreads;
-	typedef std::list<RM_EventThread*>::iterator ThreadListIt;
+	std::list<TThread*> m_xSleepingThreads;
+	std::list<TThread*> m_xActiveThreads;
 };
 
 #endif//CHALLENGE_RM_THREAD_POOL

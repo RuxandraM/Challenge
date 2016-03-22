@@ -58,6 +58,20 @@ enum RM_RETURN_CODE
 
 static void WaitKeyPress(int iKey);
 
+
+//the layout of the messages between the writer process and the reader ones
+struct RM_WToRMessageData
+{
+	u_int m_uTag;				//every time the producer writes a new segment it assigns it a unique tag
+	u_int m_uSegmentWritten;	//the segment that has just been written by the producer
+};
+
+#ifdef _DEBUG
+#define DEBUG_PRINT(args) printf args
+#else
+#define DEBUG_PRINT(args)
+#endif
+
 static void itostr(int iNumber, char buf[33])
 {
 	//char c = 0x0;

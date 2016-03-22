@@ -27,6 +27,7 @@ public:
 	}
 
 	virtual int Run(void* pParam) = 0;
+	virtual void StartShutdown() {};
 
 	static unsigned __stdcall ThreadFunc(void *pParam) 
 	{
@@ -80,6 +81,10 @@ public:
 		m_xEvent.SetEvent();
 	}
 
+protected:
+	//called from the thread only, when it doesn't want to send events to itself
+	void InternalStartShutdown(){ m_bShouldTerminate = true; }
+
 private:
 	//called just before exiting. Override this if the threads needs cleaning up
 	virtual void CleanUpBeforeTerminating(){}
@@ -88,5 +93,29 @@ private:
 	//the event that the tread is always listening to
 	RM_Event m_xEvent;
 };
+
+class RM_WorkerListenerThread : public RM_EventThread
+{
+public:
+	RM_WorkerListenerThread()
+	{
+		m_xFinishEvent.Create();
+	}
+
+	virtual void Execute(void *pParam) = 0;
+
+	void CleanUpBeforeTerminating()
+	{
+		m_xFinishEvent.SetEvent();
+	}
+
+	RM_Event* GetFinishEvent() { return &m_xFinishEvent; }
+private:
+	RM_Event m_xFinishEvent;
+};
+
+//class RM_WorkerListenerThread : public RM_Thread
+//{
+//};
 
 #endif//CHALLENGE_RM_THREAD
