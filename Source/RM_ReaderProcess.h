@@ -16,6 +16,7 @@ class RM_ReaderProcess
 {
 public:
 	RM_ReaderProcess() :m_iPID(0) {}
+	virtual ~RM_ReaderProcess() {}
 
 	void Initialise()
 	{
@@ -39,12 +40,12 @@ protected:
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> m_xMessageManager;
 };
 
-template<u_int uNUM_STAGING_SEGMENTS>
+
 class RM_StagingReader : public RM_ReaderProcess
 {
 public:
 
-	RM_StagingReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads) :RM_ReaderProcess(),
+	RM_StagingReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads, u_int uNumStagingSegments) :RM_ReaderProcess(),
 		m_uNumGroupSegments(0),
 		m_uSegmentIndexInGroup(0),
 		//m_uCurrentFile(0),
@@ -52,7 +53,8 @@ public:
 		//m_uSegmentIndexInFile(0)
 		m_iProcessIndex(iProcessIndex),
 		m_uMaxNumRandomSegments(uMaxNumRandomSegments),
-		m_uMaxNumPoolThreads(uMaxNumPoolThreads)
+		m_uMaxNumPoolThreads(uMaxNumPoolThreads),
+		m_uNumStagingSegments(uNumStagingSegments)
 	{
 		//memset(&m_xFileLimits, 0, sizeof(FileLimits));
 	}
@@ -67,13 +69,16 @@ public:
 		m_xThreadSharedParamGroup.m_pThreadPool = &m_xThreadPool;
 
 		m_xThreadPool.Initialise(m_uMaxNumPoolThreads, &m_xThreadSharedParamGroup);
-		m_xStagingBuffer.Initialise();
+		m_xStagingBuffer.Initialise(m_uNumStagingSegments);
 
 		m_xThreadPool.StartThreads();
 
 		//m_xFileOpenWorkerPool.Initialise(READER_MAX_NUM_FILES, nullptr);
 		//m_xFileOpenWorkerPool.StartThreads();
 	}
+
+	//GUGU
+	virtual void FillInContext(RM_OutputStagingThread::Context& xContext_Out) {};
 
 	void StartNewGroup()
 	{
@@ -167,7 +172,9 @@ public:
 				//pCurrentIsFileUpdatedEvent = pOutputThread->GetFinishEvent();
 				//const bool bShouldCloseFile = ((m_uSegmentIndexInFile + 1) == m_xFileLimits.m_uNumSegmentsPerFile);
 
-				OutputThreadContext xContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex); 
+				RM_OutputStagingThread::Context xContext;
+				FillInContext(xContext);
+				//RM_OutputStagingThread::Context xContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex);
 					//pCurrentFile, pCurrentIsFileReadyEvent, pCurrentIsFileUpdatedEvent, bShouldCloseFile);
 				pOutputThread->ResetContext(reinterpret_cast<void*>(&xContext));
 				RM_Event* pxEvent = pOutputThread->GetEvent();
@@ -250,10 +257,11 @@ private:
 	u_int m_uCurrentFile;
 	u_int m_uCurrentGroupIteration;
 	u_int m_iProcessIndex;
+	u_int m_uNumStagingSegments;
 
-	RM_StagingBuffer<uNUM_STAGING_SEGMENTS> m_xStagingBuffer;
-	RM_ThreadPool<RM_OutputStagingThread<uNUM_STAGING_SEGMENTS>, StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> > m_xThreadPool;
-	StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> m_xThreadSharedParamGroup;
+	RM_StagingBuffer m_xStagingBuffer;
+	RM_ThreadPool<RM_OutputStagingThread > m_xThreadPool;
+	RM_OutputStagingThread::ThreadSharedParamGroup m_xThreadSharedParamGroup;
 
 	//limits
 	u_int m_uMaxNumRandomSegments;

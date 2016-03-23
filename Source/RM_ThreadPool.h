@@ -12,16 +12,16 @@
 
 
 //TThread must derive from RM_Thread
-template<typename TThread, typename TContext>
+template<typename TThread>
 class RM_ThreadPool
 {
 public:
-	void Initialise(u_int uNumThreads, TContext* pContext)
+	void Initialise(u_int uNumThreads, typename TThread::ThreadSharedParamGroup* pSharedParams)
 	{
 		m_xSleepingPoolMutex.Lock();
 		for (u_int u = 0; u < uNumThreads; ++u)
 		{
-			TThread* pOutputThread = new TThread(pContext);
+			TThread* pOutputThread = new TThread(pSharedParams);
 			m_xSleepingThreads.push_back(pOutputThread);
 		}
 		m_xSleepingPoolMutex.Unlock();
@@ -64,7 +64,7 @@ public:
 		m_xSleepingPoolMutex.Unlock();
 	}
 
-	TThread* GetThreadForActivation(TContext* pContext)
+	TThread* GetThreadForActivation(typename TThread::ThreadSharedParamGroup* pSharedParams)
 	{
 		TThread* pResultThread = nullptr;
 		m_xSleepingPoolMutex.Lock();
@@ -78,7 +78,7 @@ public:
 
 		if (!pResultThread)
 		{
-			pResultThread = new TThread(pContext);
+			pResultThread = new TThread(pSharedParams);
 			pResultThread->Start();
 		}
 

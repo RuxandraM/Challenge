@@ -1,8 +1,7 @@
 #include "RM_ReaderOutputThread.h"
 #include "RM_ThreadPool.h"
 
-template<u_int uNUM_STAGING_SEGMENTS >
-void RM_OutputStagingThread<uNUM_STAGING_SEGMENTS>::Execute(void* pParam)
+void RM_OutputStagingThread::Execute(void* pParam)
 {
 	if (m_xContext.IsDirty())
 	{
@@ -107,8 +106,8 @@ void RM_OutputStagingThread<uNUM_STAGING_SEGMENTS>::Execute(void* pParam)
 	//the thread is ready, mark it as non-active
 	//I have to do this horrible cast because of inter-dependencies between RM_OutputStagingThread and the templated pool.
 	//I should find a better way...
-	RM_ThreadPool<RM_OutputStagingThread< uNUM_STAGING_SEGMENTS >, StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> >* pThreadPool =
-		reinterpret_cast< RM_ThreadPool<RM_OutputStagingThread<uNUM_STAGING_SEGMENTS> > , StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> >* >(m_xSharedParams.m_pThreadPool);
+	RM_ThreadPool<RM_OutputStagingThread>* pThreadPool =
+		reinterpret_cast< RM_ThreadPool<RM_OutputStagingThread >* >(m_xSharedParams.m_pThreadPool);
 	pThreadPool->ChangeThreadToSleeping(this);
 	//go back to sleep - listen for events
 }

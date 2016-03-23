@@ -31,12 +31,13 @@ class RM_SecondReader : public RM_ReaderProcess
 {
 public:
 
-	RM_SecondReader() :RM_ReaderProcess(), 
+	RM_SecondReader(u_int uNumStagingSegments) :RM_ReaderProcess(), 
 						m_uNumGroupSegments(0), 
 						m_uSegmentIndexInGroup(0),
 						m_uCurrentFile(0),
 						m_uCurrentGroupIteration(0),
-						m_uSegmentIndexInFile(0)
+						m_uSegmentIndexInFile(0),
+						m_uNumStagingSegments(uNumStagingSegments)
 	{
 		memset(&m_xFileLimits, 0, sizeof(FileLimits));
 	}
@@ -51,7 +52,7 @@ public:
 		m_xThreadSharedParamGroup.m_pThreadPool = &m_xThreadPool;
 
 		m_xThreadPool.Initialise(READER_NUM_POOLTHREADS, &m_xThreadSharedParamGroup);
-		m_xStagingBuffer.Initialise();
+		m_xStagingBuffer.Initialise(m_uNumStagingSegments);
 
 		m_xThreadPool.StartThreads();
 
@@ -90,7 +91,8 @@ public:
 			xFileName.append(szBuffer);
 			RM_File* pFile = new RM_File(xFileName.c_str(), (u_int)xFileName.length());
 			m_xGroupFiles.push_back(pFile);
-			RM_SR_WorkerThread* pThread = m_xFileOpenWorkerPool.GetThreadForActivation(pFile);
+			RM_SR_WorkerThread::ThreadSharedParamGroup xSharedParams = { pFile };
+			RM_SR_WorkerThread* pThread = m_xFileOpenWorkerPool.GetThreadForActivation(&xSharedParams);
 			RM_Event* pStartEvent = pThread->GetEvent();
 			pFile->UpdateIsReadyEvent(pThread->GetFinishEvent());
 			pStartEvent->SetEvent();	//launch the new thread that will open the file
@@ -149,7 +151,7 @@ public:
 				pCurrentIsFileUpdatedEvent = pOutputThread->GetFinishEvent();
 				const bool bShouldCloseFile = ((m_uSegmentIndexInFile + 1) == m_xFileLimits.m_uNumSegmentsPerFile);
 
-				OutputThreadContext xContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex, 
+				RM_SR_OutputThread::Context xContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex,
 					pCurrentFile, pCurrentIsFileReadyEvent, pCurrentIsFileUpdatedEvent, bShouldCloseFile);
 				pOutputThread->ResetContext(reinterpret_cast<void*>(&xContext));
 				RM_Event* pxEvent = pOutputThread->GetEvent();
@@ -231,12 +233,13 @@ private:
 	u_int m_uSegmentIndexInGroup;
 	u_int m_uCurrentFile;
 	u_int m_uCurrentGroupIteration;
+	u_int m_uNumStagingSegments;
 	
-	RM_StagingBuffer<READER_NUM_BUFFERED_SEGMENTS> m_xStagingBuffer;
-	RM_ThreadPool<RM_SR_OutputThread, ThreadSharedParamGroup> m_xThreadPool;
-	ThreadSharedParamGroup m_xThreadSharedParamGroup;
+	RM_StagingBuffer m_xStagingBuffer;
+	RM_ThreadPool<RM_SR_OutputThread> m_xThreadPool;
+	RM_SR_OutputThread::ThreadSharedParamGroup m_xThreadSharedParamGroup;
 
-	RM_ThreadPool<RM_SR_WorkerThread,RM_File> m_xFileOpenWorkerPool;
+	RM_ThreadPool<RM_SR_WorkerThread> m_xFileOpenWorkerPool;
 	std::vector<RM_File*> m_xGroupFiles;//GUGU: mem leaks??
 	u_int m_uSegmentIndexInFile;
 	FileLimits m_xFileLimits;
@@ -247,7 +250,7 @@ private:
 int main()
 {
 	
-	RM_SecondReader xReader;
+	RM_SecondReader xReader(READER_NUM_BUFFERED_SEGMENTS);
 	xReader.SR_Initialise();
 
 	xReader.ReadData();
