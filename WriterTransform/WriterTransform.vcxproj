@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{038BF909-B715-4F49-89BF-F5FC6030105C}</ProjectGuid>
+    <ProjectGuid>{64F109AF-1FA9-407E-B5D5-AA276C34BADD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>NanoporeChallenge</RootNamespace>
+    <RootNamespace>WriterTransform</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -146,27 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\main.cpp" />
-    <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp" />
-    <ClCompile Include="..\Source\RM_Thread.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\Source\RM_Event.h" />
-    <ClInclude Include="..\Source\RM_File.h" />
-    <ClInclude Include="..\Source\RM_MessageManager.h" />
-    <ClInclude Include="..\Source\RM_Mutex.h" />
-    <ClInclude Include="..\Source\RM_Process.h" />
-    <ClInclude Include="..\Source\RM_ReaderOutputThread.h" />
-    <ClInclude Include="..\Source\RM_ReaderProcess.h" />
-    <ClInclude Include="..\Source\RM_SharedMemory.h" />
-    <ClInclude Include="..\Source\RM_StagingBuffer.h" />
-    <ClInclude Include="..\Source\RM_Thread.h" />
-    <ClInclude Include="..\Source\RM_ThreadPool.h" />
-    <ClInclude Include="..\Source\SharedBuffer.h" />
-    <ClInclude Include="..\Source\Utils.h" />
-    <ClInclude Include="..\Source\Win10\Platform_Process.h" />
-    <ClInclude Include="..\Source\Win10\Platform_Utils.h" />
-    <ClInclude Include="..\Source\Win10\RM_Platform_Event.h" />
+    <ClCompile Include="WriterTransformMain.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

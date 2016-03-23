@@ -1,8 +1,8 @@
-#include "RM_OutputThread.h"
-#include "../Source/RM_ThreadPool.h"
+#include "RM_ReaderOutputThread.h"
+#include "RM_ThreadPool.h"
 
-
-void RM_SR_OutputThread::Execute(void* pParam)
+template<u_int uNUM_STAGING_SEGMENTS >
+void RM_OutputStagingThread<uNUM_STAGING_SEGMENTS>::Execute(void* pParam)
 {
 	if (m_xContext.IsDirty())
 	{
@@ -12,7 +12,7 @@ void RM_SR_OutputThread::Execute(void* pParam)
 	}
 
 	const char* pSegmentMemory = m_xSharedParams.m_pSharedBuffer->GetSegmentForReading(m_xContext.GetCurrentWriteSegment());
-	
+
 
 	if (!pSegmentMemory)
 	{
@@ -68,7 +68,7 @@ void RM_SR_OutputThread::Execute(void* pParam)
 
 	//if (!pSegmentMemory || !pStagingSegmentMemory)
 	//{
-		//ERR
+	//ERR
 	//	return;
 	//}
 
@@ -77,8 +77,8 @@ void RM_SR_OutputThread::Execute(void* pParam)
 	//char pGUGUTest[10];
 	//memcpy(pGUGUTest, pSegmentMemory, 9);
 
-	
-	
+
+
 
 
 	////TODO: open and write the corresponding HDF5
@@ -105,10 +105,10 @@ void RM_SR_OutputThread::Execute(void* pParam)
 	//printf("Second Reader: %s \n", pGUGUTest);
 	//----------------------------------------------------------------------------------
 	//the thread is ready, mark it as non-active
-	//I have to do this horrible cast because of inter-dependencies between RM_SR_OutputThread and the templated pool.
+	//I have to do this horrible cast because of inter-dependencies between RM_OutputStagingThread and the templated pool.
 	//I should find a better way...
-	RM_ThreadPool<RM_SR_OutputThread, ThreadSharedParamGroup>* pThreadPool = 
-		reinterpret_cast< RM_ThreadPool<RM_SR_OutputThread, ThreadSharedParamGroup>* >(m_xSharedParams.m_pThreadPool);
+	RM_ThreadPool<RM_OutputStagingThread< uNUM_STAGING_SEGMENTS >, StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> >* pThreadPool =
+		reinterpret_cast< RM_ThreadPool<RM_OutputStagingThread<uNUM_STAGING_SEGMENTS> > , StagingThreadSharedParamGroup<uNUM_STAGING_SEGMENTS> >* >(m_xSharedParams.m_pThreadPool);
 	pThreadPool->ChangeThreadToSleeping(this);
 	//go back to sleep - listen for events
 }

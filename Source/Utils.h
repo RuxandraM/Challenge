@@ -1,9 +1,12 @@
 #ifndef CHALLENGE_RM_UTILS
 #define CHALLENGE_RM_UTILS
 
-#include <atomic>
 
 typedef unsigned int u_int;
+
+#include "RM_Mutex.h"
+#include <atomic>
+
 
 struct SharedLabels
 {
@@ -13,10 +16,14 @@ struct SharedLabels
 
 struct SegmentInfo
 {
+	SegmentInfo() :m_iWriteTimestamp(0) {}
+
 	std::atomic<int> m_iWriteTimestamp;
-	std::atomic<int> m_iIsInUseForWriting;
-	std::atomic<int> m_iIsInUseForReading;
-	std::atomic<int> m_iWriteRequestSet;
+	RM_ReadWriteLogic m_xRWLogic;
+	//std::atomic<int> m_iIsInUseForWriting;
+	//std::atomic<int> m_iIsInUseForReading;
+	//std::atomic<int> m_iWriteRequestSet;
+
 	//volatile int m_iIsInUseForWriting;
 	//volatile int m_iIsInUseForReading;
 	//volatile int m_iWriteRequestSet;

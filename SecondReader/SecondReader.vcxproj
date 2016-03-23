@@ -151,7 +151,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RM_OutputThread.h" />
-    <ClInclude Include="RM_ThreadPool.h" />
+    <ClInclude Include="RM_ThreadPool_ToRemove.h" />
     <ClInclude Include="SecondReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

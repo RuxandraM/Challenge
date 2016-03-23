@@ -28,15 +28,12 @@ static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE
 	while (1)
 	{
 		RM_WToRMessageData xMessage;
-		RM_RETURN_CODE xResult = xMessageManager.BlockingReceive(g_iProcessIndex, &xMessage);
+		RM_RETURN_CODE xResult = xMessageManager.BlockingReceiveWithFlush(g_iProcessIndex, &xMessage);
 		if (xResult != RM_SUCCESS)
 		{
 			printf("[%d] Failed to read signalled message.",g_iPID);
 			continue;	//go back and wait for other messages. It was a problem in the transmition medium
 		}
-
-		//int iSegmentWritten = xSharedBuffer.GetLastSegmentWrittenIndex();
-		
 
 		printf("[%d] Received signal for segment %d \n",g_iPID, xMessage.m_uSegmentWritten);
 
@@ -60,7 +57,7 @@ static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE
 		u_int uGUGU = uMaxNumIterations;
 		//read all the segments from the last one I read to the one I was messaged about,
 		//or the last N if the writer is too far ahead
-		while (uMaxNumIterations >= 0u)
+		for (u_int u = 0; u < uMaxNumIterations;++u)
 		{
 			--uMaxNumIterations;
 			u_int uSegmentTag = (u_int)xSharedBuffer.GetSegmentTimestamp(uCurrentSegment);
@@ -131,32 +128,24 @@ int main()
 {
 	g_iPID = _getpid();
 	printf("[%d] First Reader initialised. Waiting key press to start... \n", g_iPID);
-	//signal(SIGINT, ReceivedSignal130);
-	//HANDLE xEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, CHALLENGE_EVENT);
-	//WaitForSingleObject(xEvent, INFINITE);
-	//RegisterWaitForSingleObject(&xEvent, hTimer, (WAITORTIMERCALLBACK)CDR, NULL, INFINITE, WT_EXECUTEDEFAULT);
-	//WaitKeyPress(3);
 
 	RM_SharedMemory xSharedMemory;
-	const void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
+	void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
 	RM_SharedMemory xSharedMemoryLabels;
-	const void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+	void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
 	xMessageManager.Initialise(g_iPID);
 
-	SharedBuffer xSharedBuffer(const_cast<void*>(pSharedMemory), const_cast<void*>(pSharedMemoryLabels));
-	
+	SharedBuffer xSharedBuffer;
+	xSharedBuffer.MapMemory(pSharedMemory, pSharedMemoryLabels);
 
-
+	//GUGU
 	ReadData(xSharedBuffer, xMessageManager);
 
 	printf("First Reader done. Waiting key press to start... \n");
 	WaitKeyPress(3);
-	
-	//xSharedMemory.CloseMemory();
-	//xSharedMemoryLabels.CloseMemory();
 
 	return S_OK;
 }

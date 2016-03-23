@@ -63,7 +63,6 @@ public:
 	{
 		if (!m_xEvent) return false;
 		WaitForSingleObject(m_xEvent, INFINITE);
-		//GUGU!!! - do I need this?
 		ResetEvent(m_xEvent);
 		return true;
 	}
