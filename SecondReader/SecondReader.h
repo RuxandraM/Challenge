@@ -23,6 +23,8 @@ struct FileLimits
 	u_int m_uNumTotalSegments;
 };
 
+
+
 static FileLimits GetFileLimits(u_int uTotalNumSegments)
 {
 	FileLimits xResult;

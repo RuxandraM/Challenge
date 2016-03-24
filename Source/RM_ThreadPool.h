@@ -2,7 +2,7 @@
 #define CHALLENGE_RM_THREAD_POOL_H_
 
 #include "..\Source\Utils.h"
-#include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
 #include "..\Source\RM_StagingBuffer.h"
 #include "..\Source\RM_MessageManager.h"
@@ -11,11 +11,14 @@
 #include <list>
 
 
-//TThread must derive from RM_Thread
+//TThread must derive from RM_Thread (see RM_OutputStagingThread)
 template<typename TThread>
 class RM_ThreadPool
 {
 public:
+
+	~RM_ThreadPool() { Shutdown(); }
+
 	void Initialise(u_int uNumThreads, typename TThread::ThreadSharedParamGroup* pSharedParams)
 	{
 		m_xSleepingPoolMutex.Lock();

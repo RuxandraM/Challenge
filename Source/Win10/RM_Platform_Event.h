@@ -15,12 +15,12 @@ public:
 		Platform_Shutdown();
 	}
 
-	RM_RETURN_CODE Platform_CreateNamedEvent(int iIndex)
+	RM_RETURN_CODE Platform_CreateNamedEvent(int iIndex, const char* szName)
 	{
 		char buff[33];
 		itostr(iIndex, buff);
 		
-		std::string xName(CHALLENGE_EVENT_NAME);
+		std::string xName(szName);
 		xName.append(buff);
 
 		std::wstring wName(xName.c_str(), xName.c_str() + strlen(xName.c_str()));
@@ -34,12 +34,12 @@ public:
 		return RM_SUCCESS;
 	}
 
-	void Platform_OpenNamedEvent(int iIndex)
+	void Platform_OpenNamedEvent(int iIndex, const char* szName)
 	{
 		char buff[33];
 		itostr(iIndex, buff);
 
-		std::string xName(CHALLENGE_EVENT_NAME);
+		std::string xName(szName);
 		xName.append(buff);
 
 		std::wstring wName(xName.c_str(), xName.c_str() + strlen(xName.c_str()));

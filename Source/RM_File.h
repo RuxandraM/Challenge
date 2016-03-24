@@ -7,7 +7,7 @@
 class RM_File
 {
 public:
-	RM_File(const char* szFileName, u_int uNameLen) : m_szFileName(nullptr), m_pxIsReadyEvent(nullptr) 
+	RM_File(const char* szFileName, u_int uNameLen) : m_szFileName(nullptr), m_pxIsReadyEvent(nullptr) , m_iIsOpen(0)
 	{
 		m_szFileName = new char[uNameLen+1];
 		memcpy(m_szFileName, szFileName, uNameLen);
@@ -18,14 +18,19 @@ public:
 		delete [] m_szFileName;
 	}
 
-	void Open(bool bCreateIfNotExisting) 
+	RM_RETURN_CODE Open(bool bCreateIfNotExisting) 
 	{ 
-		printf("Opening File %s \n", m_szFileName); 
+		printf("Opening File %s \n", m_szFileName);
+		m_iIsOpen = 1;
+		return RM_SUCCESS;
 	}
 	void Close()
 	{
 		printf("Closing File %s \n", m_szFileName);
+		m_iIsOpen = 0;
 	};
+
+	bool IsOpen(){ return m_iIsOpen == 1; }
 
 	void UpdateIsReadyEvent(RM_Event* pxEvent) { m_pxIsReadyEvent = pxEvent; }
 	RM_Event* GetIsReadyEvent() { return m_pxIsReadyEvent; }
@@ -43,6 +48,7 @@ private:
 	RM_File& operator = (const RM_File&) { return *this; }
 
 private:
+	std::atomic<int> m_iIsOpen;
 	char* m_szFileName;
 	RM_Event* m_pxIsReadyEvent;
 };

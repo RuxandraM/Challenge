@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include "..\Source\Utils.h"
-#include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
 #include "..\Source\RM_MessageManager.h"
 
@@ -30,13 +30,13 @@ int main()
 	void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE|RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
-	xMessageManager.Initialise(g_iPID);
+	xMessageManager.Initialise(g_iPID, MESSAGE_CHANNELS1_SHARED_MEMORY_NAME);
 
 
 	printf("[%d] Writer initialised. Waiting key press (1) to start... \n", g_iPID);
 	WaitKeyPress(1);
 
-	SharedBuffer xSharedBuffer;
+	RM_SharedBuffer xSharedBuffer;
 	xSharedBuffer.MapMemory(pSharedMemory, pSharedMemoryLabels);
 	
 	

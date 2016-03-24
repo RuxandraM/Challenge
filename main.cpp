@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "Source/Utils.h"
-#include "Source/SharedBuffer.h"
+#include "Source/RM_SharedBuffer.h"
 #include "Source/RM_Process.h"
 #include "Source/RM_SharedMemory.h"
 #include "Source/RM_MessageManager.h"
@@ -12,25 +12,50 @@ static u_int g_iPID = 0;
 int main()
 {
 	g_iPID = _getpid();
-	
+
 	//------------------------------------------------------------------------
-	//create the shared memory for all the processes
-	RM_SharedMemory xSharedMemory;
-	RM_SharedMemory xSharedLabelsMemory;
-	xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
-	xSharedLabelsMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_LABESLS_MAX_SIZE, TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
+	{
+		//create the shared memory for all the processes
+		RM_SharedMemory xSharedMemory;
+		RM_SharedMemory xSharedLabelsMemory;
+		xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), g_iPID);
+		xSharedLabelsMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_LABESLS_MAX_SIZE, TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 
-	//initialise the shared memory by calling the constructors for the objects that map to the corresponding layout (the SharedBuffer class)
-	void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE,
-		TEXT(SHARED_MEMORY_NAME), g_iPID);
-	void* pLabelsMemory = xSharedLabelsMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
-		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
-	SharedBuffer xSharedMemoryLayout;
-	xSharedMemoryLayout.Create(pSharedMemory, pLabelsMemory);
+		//initialise the shared memory by calling the constructors for the objects that map to the corresponding layout (the RM_SharedBuffer class)
+		void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE,
+			TEXT(SHARED_MEMORY_NAME), g_iPID);
+		void* pLabelsMemory = xSharedLabelsMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+			TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
+		RM_SharedBuffer xSharedMemoryLayout;
+		xSharedMemoryLayout.Create(pSharedMemory, pLabelsMemory);
+	}
 
-	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
-	xMessageManager.Create(g_iPID);
-	
+	//create the duplicate buffer for the process that wants to put data to another identical buffer
+	{
+		RM_SharedMemory xSharedMemory;
+		RM_SharedMemory xSharedLabelsMemory;
+		xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_DUPLICATE_MEMORY_NAME), g_iPID);
+		xSharedLabelsMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, SHARED_MEMORY_LABESLS_MAX_SIZE, TEXT(SHARED_DUPLICATE_MEMORY_LABESLS_NAME), g_iPID);
+
+		//initialise the shared memory by calling the constructors for the objects that map to the corresponding layout (the RM_SharedBuffer class)
+		void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE,
+			TEXT(SHARED_DUPLICATE_MEMORY_NAME), g_iPID);
+		void* pLabelsMemory = xSharedLabelsMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
+			TEXT(SHARED_DUPLICATE_MEMORY_LABESLS_NAME), g_iPID);
+		RM_SharedBuffer xSharedMemoryLayout;
+		xSharedMemoryLayout.Create(pSharedMemory, pLabelsMemory);
+	}
+
+	{
+		RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
+		xMessageManager.Create(g_iPID, MESSAGE_CHANNELS1_SHARED_MEMORY_NAME);
+	}
+
+	{
+		RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
+		xMessageManager.Create(g_iPID, MESSAGE_CHANNELS2_SHARED_MEMORY_NAME);
+	}
+
 	RM_Job xJob;
 	xJob.Initialise(RM_CHALLENGE_PROCESS_COUNT);
 
@@ -38,6 +63,7 @@ int main()
 	xProcesses[RM_CHALLENGE_PROCESS_WRITER].Initialise(L"Writer");
 	xProcesses[RM_CHALLENGE_PROCESS_FIRSTREADER].Initialise(L"FirstReader");
 	xProcesses[RM_CHALLENGE_PROCESS_SECONDREADER].Initialise(L"SecondReader");
+	xProcesses[RM_CHALLENGE_PROCESS_WRITER_TRANSFORM].Initialise(L"WriterTransform");
 	for (u_int u = 0; u < RM_CHALLENGE_PROCESS_COUNT; ++u)
 	{
 		xJob.AddProcess(&xProcesses[u]);

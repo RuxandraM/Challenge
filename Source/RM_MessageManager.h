@@ -6,7 +6,8 @@
 #include "RM_Event.h"
 #include "RM_Mutex.h"
 
-#define MESSAGE_SHARED_MEMORY_NAME "MemoryForMessages"
+#define MESSAGE_CHANNELS1_SHARED_MEMORY_NAME "MemoryForMessages"
+#define MESSAGE_CHANNELS2_SHARED_MEMORY_NAME "MemoryForMessages_Channel2"
 
 struct ProcessToken
 {
@@ -105,16 +106,6 @@ public:
 		}
 	}
 
-	//void SetToken(int iProcessIndex, int iToken)
-	//{
-	//	m_xProcessTokens[iProcessIndex]->m_iToken = iToken;
-	//}
-	//
-	//int GetToken(int iProcessIndex)
-	//{
-	//	return m_xProcessTokens[iProcessIndex]->m_iToken;
-	//}
-
 	RM_RETURN_CODE PushMessage(int iProcessIndex, const MessageData* pData)
 	{
 		if (iProcessIndex >= NUM_PROCESSES || iProcessIndex < 0)
@@ -182,33 +173,30 @@ template<int NUM_PROCESSES, typename MessageData>
 class RM_MessageManager
 {
 public:
-	void Create(u_int iPID)
+	void Create(u_int iPID, std::string pMessageChannelsObjName)
 	{
-		for (u_int u = 0; u < NUM_PROCESSES; ++u)
-		{
-			m_xEvents[u].CreateNamedEvent(u);
-		}
-
-		m_xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, GUGU_SIZE, TEXT(MESSAGE_SHARED_MEMORY_NAME), iPID);
+		std::wstring wName(pMessageChannelsObjName.c_str(), pMessageChannelsObjName.c_str() + strlen(pMessageChannelsObjName.c_str()));
+		m_xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, GUGU_SIZE, (WCHAR*)wName.c_str(), iPID);
 		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, GUGU_SIZE,
-			TEXT(MESSAGE_SHARED_MEMORY_NAME), iPID);
+			(WCHAR*)wName.c_str(), iPID);
 		m_xSharedMemoryLayout.Create(pSharedMemory);
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].CreateNamedEvent(u);
+			m_xEvents[u].CreateNamedEvent(u, pMessageChannelsObjName.c_str());
 		}
 	}
 
-	void Initialise(u_int iPID)
+	void Initialise(u_int iPID, std::string pMessageChannelsObjName)
 	{
+		std::wstring wName(pMessageChannelsObjName.c_str(), pMessageChannelsObjName.c_str() + strlen(pMessageChannelsObjName.c_str()));
 		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, GUGU_SIZE,
-			TEXT(MESSAGE_SHARED_MEMORY_NAME), iPID);
+			(WCHAR*)wName.c_str(), iPID);
 		m_xSharedMemoryLayout.MapMemory(pSharedMemory);
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].OpenNamedEvent(u);
+			m_xEvents[u].OpenNamedEvent(u, pMessageChannelsObjName.c_str());
 		}
 	}
 

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include "..\Source\Utils.h"
-#include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
 #include "..\Source\RM_MessageManager.h"
 
@@ -9,21 +9,12 @@ static int g_iPID = 0;
 static u_int g_uLastTag = 0u;
 static u_int g_uLastSegmentRead = 0u;
 static int g_iProcessIndex = 1; //TODO: this is hardcoded; it should be sent at creation
-
-static void ReceivedSignal130(int signal)
-{
-	if (signal == SIGINT)
-	{
-		printf("[%d] Received signal from writer!! \n", g_iPID);
-	}
-	else 
-	{
-		
-	}
-}
+static int g_iSenderIndex = 0;	//listen for messages from process 0
 
 
-static void ReadData(SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData>& xMessageManager)
+
+
+static void ReadData(RM_SharedBuffer& xSharedBuffer, RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData>& xMessageManager)
 {
 	while (1)
 	{
@@ -136,9 +127,9 @@ int main()
 		TEXT(SHARED_MEMORY_LABESLS_NAME), g_iPID);
 	
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> xMessageManager;
-	xMessageManager.Initialise(g_iPID);
+	xMessageManager.Initialise(g_iPID, MESSAGE_CHANNELS1_SHARED_MEMORY_NAME);
 
-	SharedBuffer xSharedBuffer;
+	RM_SharedBuffer xSharedBuffer;
 	xSharedBuffer.MapMemory(pSharedMemory, pSharedMemoryLabels);
 
 	//GUGU

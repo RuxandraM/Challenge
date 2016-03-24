@@ -6,13 +6,13 @@
 class RM_Event
 {
 public:
-	void CreateNamedEvent(int iIndex)
+	void CreateNamedEvent(int iIndex, const char* szName)
 	{
-		m_xPlatformEvent.Platform_CreateNamedEvent(iIndex);
+		m_xPlatformEvent.Platform_CreateNamedEvent(iIndex,szName);
 	}
-	void OpenNamedEvent(int iIndex)
+	void OpenNamedEvent(int iIndex, const char* szName)
 	{
-		m_xPlatformEvent.Platform_OpenNamedEvent(iIndex);
+		m_xPlatformEvent.Platform_OpenNamedEvent(iIndex, szName);
 	}
 	
 	void Create()

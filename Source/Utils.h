@@ -34,9 +34,11 @@ struct SegmentInfo
 
 #define SHARED_MEMORY_LABESLS_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * sizeof(SegmentInfo))
 #define SHARED_MEMORY_LABESLS_NAME "NanoporeChallengeSharedMemoryLabesls"
+#define SHARED_DUPLICATE_MEMORY_LABESLS_NAME "NanoporeChallengeSharedMemoryLabesls"
 
 #define SHARED_MEMORY_MAX_SIZE (sizeof(SharedLabels) + NUM_SEGMENTS * SEGMENT_SIZE)
 #define SHARED_MEMORY_NAME "NanoporeChallengeSharedMemory"
+#define SHARED_DUPLICATE_MEMORY_NAME "NanoporeChallengeSharedDuplicateMemory"
 #define CHALLENGE_EVENT_NAME "ChallengeEvent"
 
 
@@ -45,6 +47,7 @@ enum RM_CHALLENGE_PROCESS
 	RM_CHALLENGE_PROCESS_WRITER,
 	RM_CHALLENGE_PROCESS_FIRSTREADER,
 	RM_CHALLENGE_PROCESS_SECONDREADER,
+	RM_CHALLENGE_PROCESS_WRITER_TRANSFORM,
 	RM_CHALLENGE_PROCESS_COUNT
 };
 

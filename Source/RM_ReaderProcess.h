@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include "..\Source\Utils.h"
-#include "..\Source\SharedBuffer.h"
+#include "..\Source\RM_SharedBuffer.h"
 #include "..\Source\RM_SharedMemory.h"
 #include "..\Source\RM_StagingBuffer.h"
 #include "..\Source\RM_MessageManager.h"
@@ -15,10 +15,10 @@
 class RM_ReaderProcess
 {
 public:
-	RM_ReaderProcess() :m_iPID(0) {}
+	RM_ReaderProcess() :m_iPID(0) { m_iPID = _getpid(); }
 	virtual ~RM_ReaderProcess() {}
 
-	void Initialise()
+	virtual void Initialise()
 	{
 		m_iPID = _getpid();
 
@@ -28,42 +28,45 @@ public:
 		void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
 			TEXT(SHARED_MEMORY_LABESLS_NAME), m_iPID);
 
-		m_xMessageManager.Initialise(m_iPID);
+		m_xMessageManager.Initialise(m_iPID, MESSAGE_CHANNELS1_SHARED_MEMORY_NAME);
 
 		m_xSharedBuffer.MapMemory(pSharedMemory, pSharedMemoryLabels);
 		printf("[%d] Reader initialised. Waiting for the writer to start \n", m_iPID);
 	}
 
+	virtual void Shutdown() {}
+
 protected:
 	int m_iPID;
-	SharedBuffer m_xSharedBuffer;
+	RM_SharedBuffer m_xSharedBuffer;
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> m_xMessageManager;
 };
 
-
+template<typename TStagingThread>
 class RM_StagingReader : public RM_ReaderProcess
 {
 public:
+	typedef RM_ReaderProcess PARENT;
 
 	RM_StagingReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads, u_int uNumStagingSegments) :RM_ReaderProcess(),
-		m_uNumGroupSegments(0),
-		m_uSegmentIndexInGroup(0),
-		//m_uCurrentFile(0),
-		m_uCurrentGroupIteration(0),
-		//m_uSegmentIndexInFile(0)
 		m_iProcessIndex(iProcessIndex),
+		m_uNumGroupSegments(0),
+		m_uCurrentGroupIteration(0),
+		
+		m_uSegmentIndexInGroup(0),
+		
 		m_uMaxNumRandomSegments(uMaxNumRandomSegments),
 		m_uMaxNumPoolThreads(uMaxNumPoolThreads),
 		m_uNumStagingSegments(uNumStagingSegments)
 	{
-		//memset(&m_xFileLimits, 0, sizeof(FileLimits));
+		
 	}
+	virtual ~RM_StagingReader() {}
 
-	void SR_Initialise()
+	virtual void Initialise()
 	{
-		Initialise();
+		PARENT::Initialise();
 
-		m_xThreadSharedParamGroup.m_pMessageManager = &m_xMessageManager;
 		m_xThreadSharedParamGroup.m_pSharedBuffer = &m_xSharedBuffer;
 		m_xThreadSharedParamGroup.m_pStagingBuffer = &m_xStagingBuffer;
 		m_xThreadSharedParamGroup.m_pThreadPool = &m_xThreadPool;
@@ -72,70 +75,26 @@ public:
 		m_xStagingBuffer.Initialise(m_uNumStagingSegments);
 
 		m_xThreadPool.StartThreads();
-
-		//m_xFileOpenWorkerPool.Initialise(READER_MAX_NUM_FILES, nullptr);
-		//m_xFileOpenWorkerPool.StartThreads();
 	}
 
-	//GUGU
-	virtual void FillInContext(RM_OutputStagingThread::Context& xContext_Out) {};
-
-	void StartNewGroup()
+	RM_RETURN_CODE StartNewGroup()
 	{
 		m_uNumGroupSegments = 1 + std::rand() % m_uMaxNumRandomSegments;
-		/*
-		m_xFileLimits = GetFileLimits(m_uNumGroupSegments);
-		//if we have more data than we can ever output to files, clamp the total number of segments
-		m_uNumGroupSegments = m_xFileLimits.m_uNumTotalSegments;
-
-		//start m_xFileLimits.m_uNumFiles threads that create and open the files
-		//each will signal an event when they are ready
-		if (m_xGroupFiles.size())
-		{
-			//error
-			for (std::vector<RM_File*>::iterator it = m_xGroupFiles.begin(); it != m_xGroupFiles.end(); ++it)
-			{
-				RM_File *pFile = *it;
-				//TODO
-				//if (pFile->IsOpen()) pFile->Close();
-				delete pFile;
-			}
-		}
-		m_xGroupFiles.clear();
-
-		//start n worker threads that will create and open the files
-		for (u_int u = 0; u < m_xFileLimits.m_uNumFiles; ++u)
-		{
-			std::string xFileName(READER_OUTPUT_NAME);
-			char szBuffer[32];
-			_itoa_s(m_uCurrentGroupIteration, szBuffer, 10);
-			xFileName.append(szBuffer);
-			RM_File* pFile = new RM_File(xFileName.c_str(), (u_int)xFileName.length());
-			m_xGroupFiles.push_back(pFile);
-			RM_SR_WorkerThread* pThread = m_xFileOpenWorkerPool.GetThreadForActivation(pFile);
-			RM_Event* pStartEvent = pThread->GetEvent();
-			pFile->UpdateIsReadyEvent(pThread->GetFinishEvent());
-			pStartEvent->SetEvent();	//launch the new thread that will open the file
-		}
-		*/
+		return CustomReaderStartNewGroup();
 	}
+
+	virtual void ResetThreadContext(TStagingThread* pStagingThread, typename TStagingThread::StagingContext& xStagingContext) = 0;
+	virtual void CloseThreadContext() = 0;
+	virtual RM_RETURN_CODE CustomReaderStartNewGroup() = 0;
+	virtual void EndIteration() = 0;
 
 	RM_RETURN_CODE ReadData()
 	{
 		//start a new iteration; this will generate the number of segments in the group, and will reset the counters
-		StartNewGroup();
-		/*
-		size_t xSize = m_xGroupFiles.size();
-		if (xSize == 0)
-		{
-			printf("Failed to open any files. The reader will not execute. \n");
-			return RM_CUSTOM_ERR1;
-		}
-		RM_File* pCurrentFile = m_xGroupFiles[xSize - 1];
-		m_xGroupFiles.pop_back();
-		RM_Event* pCurrentIsFileReadyEvent = pCurrentFile->GetIsReadyEvent();
-		RM_Event* pCurrentIsFileUpdatedEvent = nullptr;
-		*/
+
+		RM_RETURN_CODE xResult = StartNewGroup();
+		if (xResult != RM_SUCCESS) return xResult;
+		
 		//keep listening
 		while (true)
 		{
@@ -148,10 +107,6 @@ public:
 				continue;	//go back and wait for other messages. It was a problem in the transmition medium
 			}
 
-			//printf("Reading segment num %d, index %d \n",xMessage.m_uTag,xMessage.m_uSegmentWritten);
-
-			//int iWriteTag = m_xMessageManager.BlockingReceive(g_iProcessIndex);
-			//int iSegmentWritten = m_xSharedBuffer.GetLastSegmentWrittenIndex();
 			int iStagingSegmentIndex = m_xStagingBuffer.ReserveSegmentIfAvailable();
 			if (iStagingSegmentIndex == -1)
 			{
@@ -159,7 +114,7 @@ public:
 				return RM_CUSTOM_ERR2;
 			}
 			//this will always return me a thread, it will create one if needed; if creation fails it means that something wrong has happened
-			RM_WorkerListenerThread* pOutputThread = m_xThreadPool.GetThreadForActivation(&m_xThreadSharedParamGroup);
+			TStagingThread* pOutputThread = m_xThreadPool.GetThreadForActivation(&m_xThreadSharedParamGroup);
 			if (!pOutputThread)
 			{
 				printf("No available threads \n");
@@ -167,21 +122,13 @@ public:
 			}
 			if (iStagingSegmentIndex != -1)
 			{
-				//Every thread needs to know the current file, the event to listen when my output turn comes, and the 
-				//event I need to send when I'm done with outputting
-				//pCurrentIsFileUpdatedEvent = pOutputThread->GetFinishEvent();
-				//const bool bShouldCloseFile = ((m_uSegmentIndexInFile + 1) == m_xFileLimits.m_uNumSegmentsPerFile);
-
-				RM_OutputStagingThread::Context xContext;
-				FillInContext(xContext);
-				//RM_OutputStagingThread::Context xContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex);
-					//pCurrentFile, pCurrentIsFileReadyEvent, pCurrentIsFileUpdatedEvent, bShouldCloseFile);
-				pOutputThread->ResetContext(reinterpret_cast<void*>(&xContext));
+				TStagingThread::StagingContext xStagingContext(xMessage.m_uTag, xMessage.m_uSegmentWritten, iStagingSegmentIndex);
+				ResetThreadContext(pOutputThread, xStagingContext);
+				
 				RM_Event* pxEvent = pOutputThread->GetEvent();
 				pxEvent->SetEvent();
 
-				//pCurrentIsFileReadyEvent = pCurrentIsFileUpdatedEvent;
-				//pCurrentIsFileUpdatedEvent = nullptr;
+				CloseThreadContext();
 			}
 			else
 			{
@@ -194,74 +141,43 @@ public:
 
 			//count the consecutive segments since the start of this group
 			++m_uSegmentIndexInGroup;
-			//count the segments since the start of the file
-			//++m_uSegmentIndexInFile;
-
-			//if (m_uSegmentIndexInFile == m_xFileLimits.m_uNumSegmentsPerFile)
-			//{
-			//	m_uSegmentIndexInFile = 0;
-			//	//get new file
-			//	size_t xSize = m_xGroupFiles.size();
-			//	if (xSize == 0)
-			//	{
-			//		//no more files to process. Reached the end of the group.
-			//		pCurrentFile = nullptr;
-			//	}
-			//	else
-			//	{
-			//		pCurrentFile = m_xGroupFiles[xSize - 1];
-			//		m_xGroupFiles.pop_back();
-			//		pCurrentIsFileReadyEvent = pCurrentFile->GetIsReadyEvent();
-			//	}
-			//}
+			
+			EndIteration();
+			
 
 			//----------------------------------------------------------------------
 			//TODO: a thread has the file and it will need to close it. I will not wait here to close, just delete the pointers
 			//TODO: store a list of files that need closing. The threads will pop from here when they close the file
 			if (m_uSegmentIndexInGroup == m_uNumGroupSegments)
 			{
-				//for (std::vector<RM_File*>::iterator it = m_xGroupFiles.begin(); it != m_xGroupFiles.end(); ++it)
-				//{
-				//	RM_File *pFile = *it;
-				//	//TODO
-				//	//if (pFile->IsOpen()) pFile->Close();
-				//	delete pFile;
-				//}
-				//m_xGroupFiles.clear();
-
 				++m_uCurrentGroupIteration;
 
 				StartNewGroup();
-
-				//size_t xSize = m_xGroupFiles.size();
-				//if (xSize == 0)
-				//{
-				//	printf("Failed to open any files. The reader will not execute. \n");
-				//	return RM_CUSTOM_ERR1;
-				//}
-				//pCurrentFile = m_xGroupFiles[xSize - 1];
-				//m_xGroupFiles.pop_back();
-				//pCurrentIsFileReadyEvent = pCurrentFile->GetIsReadyEvent();
-				//pCurrentIsFileUpdatedEvent = nullptr;
 			}
 		}
 	}
 
-	void SR_Shutdown()
+	void Shutdown()
 	{
+		PARENT::Shutdown();
 		m_xThreadPool.Shutdown();
 	}
-private:
+
+protected:
+	u_int m_iProcessIndex;
 	u_int m_uNumGroupSegments;
+	u_int m_uCurrentGroupIteration;
+
+private:	
 	u_int m_uSegmentIndexInGroup;
 	u_int m_uCurrentFile;
-	u_int m_uCurrentGroupIteration;
-	u_int m_iProcessIndex;
+	
+	
 	u_int m_uNumStagingSegments;
 
 	RM_StagingBuffer m_xStagingBuffer;
-	RM_ThreadPool<RM_OutputStagingThread > m_xThreadPool;
-	RM_OutputStagingThread::ThreadSharedParamGroup m_xThreadSharedParamGroup;
+	RM_ThreadPool< TStagingThread > m_xThreadPool;
+	typename TStagingThread::ThreadSharedParamGroup m_xThreadSharedParamGroup;
 
 	//limits
 	u_int m_uMaxNumRandomSegments;

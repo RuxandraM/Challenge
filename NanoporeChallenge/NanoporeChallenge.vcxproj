@@ -162,7 +162,7 @@
     <ClInclude Include="..\Source\RM_StagingBuffer.h" />
     <ClInclude Include="..\Source\RM_Thread.h" />
     <ClInclude Include="..\Source\RM_ThreadPool.h" />
-    <ClInclude Include="..\Source\SharedBuffer.h" />
+    <ClInclude Include="..\Source\RM_SharedBuffer.h" />
     <ClInclude Include="..\Source\Utils.h" />
     <ClInclude Include="..\Source\Win10\Platform_Process.h" />
     <ClInclude Include="..\Source\Win10\Platform_Utils.h" />
