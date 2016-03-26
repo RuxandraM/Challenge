@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 	}
 
 	std::string xInFileName("test1.txt");
-	if (argc)
+	if (argc == 2)
 	{
 		xInFileName = argv[1];
 	}
