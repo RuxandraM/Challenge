@@ -37,62 +37,11 @@ void RM_OutputStagingThread::Execute(void* pParam)
 			{
 				UseStagingMemory(pStagingSegmentMemory);
 			}
-			//if (!m_xContext.GetFile() || !m_xContext.GetFileReadyEvent())
-			//{
-			//	//can't write to file, I wasn't given a valid file
-			//	printf("Failed to write to file \n");
-			//}
-			//else
-			//{
-			//	Sleep(1500);
-			//	m_xContext.GetFile()->WriteData(pStagingSegmentMemory, SEGMENT_SIZE);
-			//	if (m_xContext.GetFileDoneEvent()) { m_xContext.GetFileDoneEvent()->SetEvent(); }
-			//	if (m_xContext.ShouldCloseFile())
-			//	{
-			//		m_xContext.GetFile()->Close();
-			//	}
-			//}
+			
 			m_xSharedParams.m_pStagingBuffer->EndReadingFromSegment(m_xStagingContext.GetCurrentStagingSegment());
 		}
 	}
 
-	//if (!pSegmentMemory || !pStagingSegmentMemory)
-	//{
-	//ERR
-	//	return;
-	//}
-
-	//memcpy(pStagingSegmentMemory, pSegmentMemory, SEGMENT_SIZE);
-
-	//char pGUGUTest[10];
-	//memcpy(pGUGUTest, pSegmentMemory, 9);
-
-
-
-
-
-	////TODO: open and write the corresponding HDF5
-	//if (m_xContext.GetFile())
-	//{
-	//	if (m_xContext.GetFileReadyEvent())
-	//	{
-	//		m_xContext.GetFileReadyEvent()->BlockingWait();
-	//		m_xContext.GetFile()->WriteData(pStagingSegmentMemory, SEGMENT_SIZE);
-	//		if (m_xContext.GetFileDoneEvent()) m_xContext.GetFileDoneEvent()->SetEvent();
-	//	}
-	//	if (m_xContext.ShouldCloseFile())
-	//	{
-	//		m_xContext.GetFile()->Close();
-	//	}
-	//}
-	//
-	//m_xSharedParams.m_pStagingBuffer->EndReadingFromSegment(m_xContext.GetCurrentStagingSegment());
-
-
-	//pGUGUTest[9] = '\0';
-	//delay the reader too much!!
-
-	//printf("Second Reader: %s \n", pGUGUTest);
 	//----------------------------------------------------------------------------------
 	//the thread is ready, mark it as non-active
 	//I have to do this horrible cast because of inter-dependencies between RM_OutputStagingThread and the templated pool.

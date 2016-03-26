@@ -3,11 +3,17 @@
 
 #include "Utils.h"
 #include "RM_Event.h"
-//TODO:real files
+#include "RM_Mutex.h"
+
+//TODO:real HDF5 files
+#include <fstream>
+
+
 class RM_File
 {
 public:
-	RM_File(const char* szFileName, u_int uNameLen) : m_szFileName(nullptr), m_pxIsReadyEvent(nullptr) , m_iIsOpen(0)
+	RM_File(const char* szFileName, u_int uNameLen, RM_ACCESS_FLAG eAccessFlag) : 
+		m_szFileName(nullptr), m_pxIsReadyEvent(nullptr) , m_iIsOpen(0)
 	{
 		m_szFileName = new char[uNameLen+1];
 		memcpy(m_szFileName, szFileName, uNameLen);
@@ -20,14 +26,30 @@ public:
 
 	RM_RETURN_CODE Open(bool bCreateIfNotExisting) 
 	{ 
+		m_xFileMutex.Lock();
 		printf("Opening File %s \n", m_szFileName);
+		m_xFile.open(m_szFileName, std::fstream::out);
+		//TODO:
+		//file = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+
+		const u_int uDealyInNanoS = rand() % CHALLENGE_OPEN_FILE_DELAY_IN_NANOSEC;
+		Sleep(uDealyInNanoS);
+
 		m_iIsOpen = 1;
+		m_xFileMutex.Unlock();
 		return RM_SUCCESS;
 	}
+
 	void Close()
 	{
-		printf("Closing File %s \n", m_szFileName);
-		m_iIsOpen = 0;
+		m_xFileMutex.Lock();
+		if (m_iIsOpen != 0)
+		{
+			printf("Closing File %s \n", m_szFileName);
+			m_xFile.close();
+			m_iIsOpen = 0;
+		}
+		m_xFileMutex.Unlock();
 	};
 
 	bool IsOpen(){ return m_iIsOpen == 1; }
@@ -36,10 +58,31 @@ public:
 	RM_Event* GetIsReadyEvent() { return m_pxIsReadyEvent; }
 	void WriteData(void* pData, u_int uDataSize) 
 	{
-		char pGUGUTest[10];
-		memcpy(pGUGUTest, pData, 9);
-		pGUGUTest[9] = '\0';
-		printf(" %s: %s \n", m_szFileName, pGUGUTest);
+		if (m_iIsOpen == 0)
+		{
+			printf("Attempt to write to file when it is not open! \n");
+			return;
+		}
+
+		//deliberately slow down here to pretend we are writing to a big file
+		const u_int uDealyInNanoS = rand() % CHALLENGE_WRITE_FILE_DELAY_IN_NANOSEC;
+		Sleep(uDealyInNanoS);
+
+		char szBuffer[10];
+		memcpy(szBuffer, pData, 9);
+		szBuffer[9] = '\0';
+		
+		#ifdef DEBUG_OUTPUT_TO_CONSOLE
+			printf(" %s: %s \n", m_szFileName, szBuffer);
+		#endif//DEBUG_OUTPUT_TO_CONSOLE
+
+		//TODO: I'm not outputting everything here
+		m_xFile << szBuffer <<"\n";
+	}
+
+	const char* GetFileName() const
+	{
+		return m_szFileName;
 	}
 
 private:
@@ -49,8 +92,12 @@ private:
 
 private:
 	std::atomic<int> m_iIsOpen;
+	RM_PlatformMutex m_xFileMutex;
 	char* m_szFileName;
+	u_int m_uAccessFlags;	//combination of RM_ACCESS_FLAG
 	RM_Event* m_pxIsReadyEvent;
+
+	std::fstream m_xFile;
 };
 
 #endif//CHALLENGE_RM_FILE

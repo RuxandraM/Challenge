@@ -1,23 +1,20 @@
 #include <stdio.h>
 #include <windows.h>
-#include "..\Source\Utils.h"
-#include "..\Source\RM_SharedBuffer.h"
-#include "..\Source\RM_ReaderProcess.h"
-#include "..\Source\RM_SharedMemory.h"
-#include "..\Source\RM_StagingBuffer.h"
-#include "..\Source\RM_MessageManager.h"
-#include "..\Source\RM_Thread.h"
-#include "..\Source\RM_Mutex.h"
-#include "..\Source\RM_ThreadPool.h"
-#include "..\Source\RM_ReaderProcess.h"
+#include "../Source/Utils.h"
+#include "../Source/RM_SharedBuffer.h"
+#include "../Source/RM_ReaderProcess.h"
+#include "../Source/RM_SharedMemory.h"
+#include "../Source/RM_StagingBuffer.h"
+#include "../Source/RM_MessageManager.h"
+#include "../Source/RM_Thread.h"
+#include "../Source/RM_Mutex.h"
+#include "../Source/RM_ThreadPool.h"
+#include "../Source/RM_ReaderProcess.h"
+#include "../Source/RM_OutputThread.h"
 #include "SecondReader.h"
-#include "RM_OutputThread.h"
 #include <vector>
 
 
-//static int g_iPID = 0;
-static int g_iLastTag = 0;
-static int g_iLastSegmentRead = 0;
 static int g_iProcessIndex = 2; //TODO: this is hardcoded; it should be sent at creation
 
 
@@ -48,9 +45,10 @@ public:
 	virtual void ResetThreadContext(TStagingThread* pStagingThread, typename TStagingThread::StagingContext& xStagingContext)
 	{
 		m_pCurrentIsFileUpdatedEvent = pStagingThread->GetFinishEvent();
-		const bool bShouldCloseFile = ((m_uSegmentIndexInFile + 1) == m_xFileLimits.m_uNumSegmentsPerFile);
+		const bool bShouldCloseFile = ((m_uSegmentIndexInFile + 1) == m_xFileLimits.m_uNumSegmentsPerFile) || 
+			((m_uSegmentIndexInGroup + 1) == m_xFileLimits.m_uNumTotalSegments);	//if it reached the end of the current file or the end of the group
 		TStagingThread::Context xDerivedContext(m_pCurrentFile, m_pCurrentIsFileReadyEvent, m_pCurrentIsFileUpdatedEvent, bShouldCloseFile);
-		//GUGU: I should be able to send the fully typed context here
+		//TODO: I should be able to send the fully typed context here
 		pStagingThread->ResetContexts(xStagingContext, &xDerivedContext);
 	}
 
@@ -63,8 +61,15 @@ public:
 	{
 		//count the segments since the start of the file
 		++m_uSegmentIndexInFile;
+		if (m_uSegmentIndexInGroup == m_xFileLimits.m_uNumTotalSegments)
+		{
+			//gropup ended
+			m_uSegmentIndexInFile = 0;
+			m_pCurrentFile = nullptr;
+		}
 
-		if (m_uSegmentIndexInFile == m_xFileLimits.m_uNumSegmentsPerFile)
+		//if we reached the end of the file due to num segments per file limit
+		if (m_uSegmentIndexInFile == m_xFileLimits.m_uNumSegmentsPerFile )
 		{
 			m_uSegmentIndexInFile = 0;
 			//get new file
@@ -89,6 +94,9 @@ public:
 		//if we have more data than we can ever output to files, clamp the total number of segments
 		m_uNumGroupSegments = m_xFileLimits.m_uNumTotalSegments;
 
+		printf("Starting group number %d with %d segments to be written in %d files\n",
+			m_uCurrentGroupIteration, m_uNumGroupSegments,m_xFileLimits.m_uNumFiles);
+
 		//start m_xFileLimits.m_uNumFiles threads that create and open the files
 		//each will signal an event when they are ready
 		if (m_xGroupFiles.size())
@@ -97,7 +105,8 @@ public:
 			for (std::vector<RM_File*>::iterator it = m_xGroupFiles.begin(); it != m_xGroupFiles.end(); ++it)
 			{
 				RM_File *pFile = *it;
-				//TODO
+				//don't close the file here. A thread will do so when it's done with it. TODO: We should however be more secure an 
+				//don't risk leaving dangling files that are pending closing.
 				//if (pFile->IsOpen()) pFile->Close();
 				delete pFile;
 			}
@@ -105,16 +114,22 @@ public:
 		m_xGroupFiles.clear();
 
 		//start n worker threads that will create and open the files
-		for (u_int u = 0; u < m_xFileLimits.m_uNumFiles; ++u)
+		for (u_int uFile = 0; uFile < m_xFileLimits.m_uNumFiles; ++uFile)
 		{
-			std::string xFileName(READER_OUTPUT_NAME);
+			std::string xFileName(m_xGlobalOutputFileName);
 			char szBuffer[32];
 			_itoa_s(m_uCurrentGroupIteration, szBuffer, 10);
 			xFileName.append(szBuffer);
-			RM_File* pFile = new RM_File(xFileName.c_str(), (u_int)xFileName.length());
+			xFileName.append("_");
+			_itoa_s(m_xFileLimits.m_uNumFiles - uFile - 1, szBuffer, 10);
+			xFileName.append(szBuffer);
+
+			RM_File* pFile = new RM_File(xFileName.c_str(), (u_int)xFileName.length(),RM_ACCESS_WRITE);
 			m_xGroupFiles.push_back(pFile);
-			RM_SR_WorkerThread::ThreadSharedParamGroup xSharedParams = { pFile };
-			RM_SR_WorkerThread* pThread = m_xFileOpenWorkerPool.GetThreadForActivation(&xSharedParams);
+			
+			RM_SR_WorkerThread* pThread = m_xFileOpenWorkerPool.GetThreadForActivation(nullptr);
+			RM_SR_WorkerThread::Context xContext(pFile, m_uCurrentGroupIteration);
+			pThread->ResetContext(&xContext);
 			RM_Event* pStartEvent = pThread->GetEvent();
 			pFile->UpdateIsReadyEvent(pThread->GetFinishEvent());
 			pStartEvent->SetEvent();	//launch the new thread that will open the file
@@ -165,8 +180,6 @@ private:
 
 int main()
 {
-	WaitKeyPress(2);
-
 	RM_SecondReader<RM_SR_OutputStagingThread> xReader(
 		g_iProcessIndex,
 		READER_MAX_RANDOM_SEGMENTS,

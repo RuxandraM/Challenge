@@ -30,34 +30,12 @@ public:
 
 	void Shutdown() {}
 
-	//void ClearFlags()
-	//{
-		//atomic operator = (see definition)
-		//m_pSegmentInfo->m_iWriteTimestamp = 0;
-		//m_pSegmentInfo->m_iWriteRequestSet = 0;
-		//m_pSegmentInfo->m_iIsInUseForWriting = 0;
-		//m_pSegmentInfo->m_iWriteRequestSet = 0;
-	//}
-
 	static long long GetMemoryBufferSize() { return SEGMENT_SIZE; }
 	static long long GetLabelSize() { return sizeof(SegmentInfo); }
 
 	bool AddWriteRequest()
 	{
 		return m_pSegmentInfo->m_xRWLogic.AddWriteRequest();
-
-		//If it hasn't succeded it means the segment is still in use by readers; 
-		//TODO: what to do here? I don't want to delay the writer
-		//if (!bReserveSucceded){ return false; }
-
-		//m_pSegmentInfo->m_iWriteRequestSet = 1u;
-		//GUGU: let the others know I want to write here
-
-		//if (m_pSegmentInfo->m_iIsInUseForReading)
-		//{	
-		//	return false;	//people are still reading from here
-		//}
-		//return true;	//write request added succesfully, no other processes are reading
 	}
 
 	bool AddReadRequest()
@@ -67,16 +45,11 @@ public:
 
 	char* GetMemoryForWriting()
 	{
-		//GUGU: this time is not relevant between different machines
-		//m_pSegmentInfo->m_iWriteTimestamp = GetTickCount();
-		//m_pSegmentInfo->m_iIsInUseForWriting = 1;
 		return m_pMemory;
 	}
 
 	const char* GetMemoryForReading()
 	{
-		//m_pSegmentInfo->m_iIsInUseForReading = 1;
-		//m_pSegmentInfo->m_xRWLogic.ReserveForReading();
 		return m_pMemory;
 	}
 
@@ -88,15 +61,8 @@ public:
 	void SetFinishedWriting(int iTimestamp)
 	{
 		m_pSegmentInfo->m_xRWLogic.SetFinishedWriting();
-		//m_pSegmentInfo->m_iWriteRequestSet = 0;
-		//m_pSegmentInfo->m_iIsInUseForWriting = 0;
 		m_pSegmentInfo->m_iWriteTimestamp = iTimestamp;
 	}
-
-	//bool IsInUseForWriting()
-	//{
-	//	return (m_pSegmentInfo->m_iWriteRequestSet != 0) || (m_pSegmentInfo->m_iIsInUseForWriting != 0);
-	//}
 
 	int GetTimestamp() const
 	{
@@ -108,6 +74,10 @@ private:
 	char* m_pMemory;
 };
 
+
+
+//holds a list of segments (shared memory). Labels is a shared RW memory used by all the processes
+//to synchronise the access to the segments (is in use for read/write etc)
 class RM_SharedBuffer
 {
 public:
@@ -115,6 +85,7 @@ public:
 	RM_SharedBuffer() :m_pSegments(nullptr), m_pxLables(nullptr) {}
 	~RM_SharedBuffer() { delete[] m_pSegments; }
 
+	//map memory is reinterpreting the memory to set where my data is pointing to, as opposed to create, that calls the constructors
 	void MapMemory(void* pMemory, void* pLabelsMemory)
 	{
 		//map pMemory and pLabelsMemory to the layout of this class
@@ -137,19 +108,13 @@ public:
 		}
 	}
 
+	//maps the memory and calls the constructors to initialise it. This is done once, before the processes are created and it becomes shared.
 	void Create(void* pMemory, void* pLabelsMemory)
 	{
 		MapMemory(pMemory, pLabelsMemory);
 
 		m_pxLables->m_iWriteIndex = 0;
 		m_pxLables->m_iTimestamp = 0;
-
-		////map pMemory and pLabelsMemory to the layout of this class
-		//m_pxLables = reinterpret_cast<SharedLabels*>(pLabelsMemory);
-		//
-		////offset by shared labels
-		//char* pCurrentMemPtr = reinterpret_cast<char*>(pMemory);
-		//char* pCurrentLabelPtr = reinterpret_cast<char*>(pLabelsMemory) + sizeof(SharedLabels);
 
 		Segment* pSeg = m_pSegments;
 		//loop through all the segments to initialise them
@@ -170,7 +135,7 @@ public:
 		}
 		else
 		{
-			//segment in use for reading - GUGU - todo
+			//segment in use for reading
 			return nullptr;
 		}
 	}
@@ -190,16 +155,12 @@ public:
 
 	const char* GetSegmentForReading(u_int uSegmentIndex)
 	{
-		//GUGU atomic!
 		Segment* pCurrentSegment = &m_pSegments[uSegmentIndex];
 		if (pCurrentSegment->AddReadRequest())
 		{
 			return pCurrentSegment->GetMemoryForReading();
 		}
 		return nullptr;
-
-		//if (pCurrentSegment->IsInUseForWriting()) return nullptr;
-		//return pCurrentSegment->GetMemoryForReading();
 	}
 
 	int GetSegmentTimestamp(u_int uSegmentIndex)
@@ -216,17 +177,6 @@ public:
 		return m_pxLables->m_iWriteIndex;
 	}
 
-	//void Initialise(u_int uSizeInSegments = 10u, u_int uSegmentSize = 1000000u)
-	//{
-	//	m_pSegments = new Segment[uSizeInSegments];
-	//	Segment *pSeg = m_pSegments;
-	//	while ((m_pSegments + uSizeInSegments) - pSeg > 0 )
-	//	{
-	//		pSeg->Initialise(uSegmentSize);
-	//		++pSeg;
-	//	}
-	//}
-
 	void Shutdown()
 	{
 		delete [] m_pSegments;
@@ -234,8 +184,6 @@ public:
 	}
 
 private:
-	
-
 	SharedLabels* m_pxLables;
 	Segment* m_pSegments;
 };

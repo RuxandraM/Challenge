@@ -7,14 +7,14 @@ class RM_SharedMemory
 {
 public:
 	//flags can be RM_ACCESS_FLAG
-	RM_RETURN_CODE Create(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
+	RM_RETURN_CODE Create(u_int uFlags, long long llSharedMemMaxSize, std::string& xObjectName, u_int uPID)
 	{
-		return m_xPlatformMem.CreateMemory(uFlags, llSharedMemMaxSize, szName, uPID);
+		return m_xPlatformMem.CreateMemory(uFlags, llSharedMemMaxSize, xObjectName, uPID);
 	}
 
-	void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, TCHAR szName[], u_int uPID)
+	void* OpenMemory(u_int uFlags, long long llSharedMemMaxSize, std::string& xObjectName, u_int uPID)
 	{
-		return m_xPlatformMem.OpenMemory(uFlags, llSharedMemMaxSize, szName, uPID);
+		return m_xPlatformMem.OpenMemory(uFlags, llSharedMemMaxSize, xObjectName, uPID);
 	}
 
 	void CloseMemory()

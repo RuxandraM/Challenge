@@ -3,43 +3,66 @@
 
 #include <stdio.h>
 #include <windows.h>
-#include "..\Source\Utils.h"
-#include "..\Source\RM_SharedBuffer.h"
-#include "..\Source\RM_SharedMemory.h"
-#include "..\Source\RM_StagingBuffer.h"
-#include "..\Source\RM_MessageManager.h"
-#include "..\Source\RM_Thread.h"
-#include "RM_ReaderOutputThread.h"
-#include "RM_ThreadPool.h"
+#include "../Source/Utils.h"
+#include "../Source/RM_MessageManager.h"
+#include "../Source/RM_ReaderOutputThread.h"
+#include "../Source/RM_SharedInitData.h"
+#include "../Source/RM_SharedBuffer.h"
+#include "../Source/RM_SharedMemory.h"
+#include "../Source/RM_StagingBuffer.h"
+#include "../Source/RM_Thread.h"
+#include "../Source/RM_ThreadPool.h"
+
 
 class RM_ReaderProcess
 {
 public:
-	RM_ReaderProcess() :m_iPID(0) { m_iPID = _getpid(); }
+	RM_ReaderProcess(int iProcessIndex) :m_iPID(0), m_iProcessIndex(iProcessIndex){ m_iPID = _getpid(); }
 	virtual ~RM_ReaderProcess() {}
 
 	virtual void Initialise()
 	{
 		m_iPID = _getpid();
 
+		RM_InitData xInitData;
+		{
+			RM_SharedMemory xSharedMemory;
+			std::string xSharedInitDataName(SHARED_INIT_DATA_NAME);
+			void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_INIT_DATA_MAX_SIZE, xSharedInitDataName, m_iPID);
+			RM_SharedInitDataLayout xInitDataLayout;
+			xInitDataLayout.MapMemory(pSharedMemory);
+			xInitData = xInitDataLayout.GetInitData(m_iProcessIndex);
+		}
+
 		RM_SharedMemory xSharedMemory;
-		void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_MEMORY_NAME), m_iPID);
+		std::string xSharedBuffName(xInitData.pSharedBufferMemNameIn);
+		void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_READ, SHARED_MEMORY_MAX_SIZE, xSharedBuffName, m_iPID);
+
 		RM_SharedMemory xSharedMemoryLabels;
-		void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
-			TEXT(SHARED_MEMORY_LABESLS_NAME), m_iPID);
+		std::string xLablesObjName(xSharedBuffName);
+		xLablesObjName.append("Lables");
+		void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE, xLablesObjName, m_iPID);
 
-		m_xMessageManager.Initialise(m_iPID, MESSAGE_CHANNELS1_SHARED_MEMORY_NAME);
-
+		std::string xMsgQName(xInitData.pMessageQueueNameIn);
+		m_xMessageManager.Initialise(m_iPID, xMsgQName);
+		
 		m_xSharedBuffer.MapMemory(pSharedMemory, pSharedMemoryLabels);
+
+		m_xGlobalOutputFileName = xInitData.pOutputFileName;
+
 		printf("[%d] Reader initialised. Waiting for the writer to start \n", m_iPID);
 	}
 
 	virtual void Shutdown() {}
 
+	virtual RM_RETURN_CODE ReadData() = 0;
+
 protected:
 	int m_iPID;
+	int m_iProcessIndex;
 	RM_SharedBuffer m_xSharedBuffer;
 	RM_MessageManager<RM_CHALLENGE_PROCESS_COUNT, RM_WToRMessageData> m_xMessageManager;
+	std::string m_xGlobalOutputFileName;
 };
 
 template<typename TStagingThread>
@@ -48,13 +71,10 @@ class RM_StagingReader : public RM_ReaderProcess
 public:
 	typedef RM_ReaderProcess PARENT;
 
-	RM_StagingReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads, u_int uNumStagingSegments) :RM_ReaderProcess(),
-		m_iProcessIndex(iProcessIndex),
+	RM_StagingReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads, u_int uNumStagingSegments) :RM_ReaderProcess(iProcessIndex),
 		m_uNumGroupSegments(0),
 		m_uCurrentGroupIteration(0),
-		
 		m_uSegmentIndexInGroup(0),
-		
 		m_uMaxNumRandomSegments(uMaxNumRandomSegments),
 		m_uMaxNumPoolThreads(uMaxNumPoolThreads),
 		m_uNumStagingSegments(uNumStagingSegments)
@@ -80,6 +100,7 @@ public:
 	RM_RETURN_CODE StartNewGroup()
 	{
 		m_uNumGroupSegments = 1 + std::rand() % m_uMaxNumRandomSegments;
+		m_uSegmentIndexInGroup = 0;
 		return CustomReaderStartNewGroup();
 	}
 
@@ -90,8 +111,7 @@ public:
 
 	RM_RETURN_CODE ReadData()
 	{
-		//start a new iteration; this will generate the number of segments in the group, and will reset the counters
-
+		//start a new iteration. This will generate the number of segments in the group, and will reset the counters
 		RM_RETURN_CODE xResult = StartNewGroup();
 		if (xResult != RM_SUCCESS) return xResult;
 		
@@ -132,8 +152,7 @@ public:
 			}
 			else
 			{
-				//TODO:
-				//I could try reading straight from the shared buffer, hoping that the circuar character of the buffer will allow me
+				//TODO: I could try reading straight from the shared buffer, hoping that the circuar character of the buffer will allow me
 				//to read without interfering with the writer.
 				printf("[%d] Out of staging buffer space. I will skip reading this segment.\n", m_iPID);
 				return RM_CUSTOM_ERR1;
@@ -142,16 +161,17 @@ public:
 			//count the consecutive segments since the start of this group
 			++m_uSegmentIndexInGroup;
 			
+			//custom logic in the derived classes to let them know we progressed to the next segment and we need to prepare for the next iteration
 			EndIteration();
 			
 
 			//----------------------------------------------------------------------
-			//TODO: a thread has the file and it will need to close it. I will not wait here to close, just delete the pointers
-			//TODO: store a list of files that need closing. The threads will pop from here when they close the file
+			//Note: a thread has the file and it will need to close it. I will not wait here to close, just delete the pointers
+			//TODO: store a list of files that need closing to handle error cases.
 			if (m_uSegmentIndexInGroup == m_uNumGroupSegments)
 			{
+				//prepare for the next group iteration
 				++m_uCurrentGroupIteration;
-
 				StartNewGroup();
 			}
 		}
@@ -164,29 +184,27 @@ public:
 	}
 
 protected:
-	u_int m_iProcessIndex;
 	u_int m_uNumGroupSegments;
 	u_int m_uCurrentGroupIteration;
+	u_int m_uSegmentIndexInGroup;
 
 private:	
-	u_int m_uSegmentIndexInGroup;
+	
 	u_int m_uCurrentFile;
 	
-	
 	u_int m_uNumStagingSegments;
+	RM_StagingBuffer m_xStagingBuffer;	//some staging memory to allow the writer to progress more in its circular queue.
+										//With the current implementation, if we run out of staging buffer we loose data and proceed to the next segment.
+										//Theoretically, this could be empty (no staging) in which case the reading threads can block the segments from the
+										//circular buffer. This would mean that the writer is at risk of waiting in a mutex if it produces data too quickly.
+										//The latter hasn't been implemented yet.
 
-	RM_StagingBuffer m_xStagingBuffer;
 	RM_ThreadPool< TStagingThread > m_xThreadPool;
 	typename TStagingThread::ThreadSharedParamGroup m_xThreadSharedParamGroup;
 
 	//limits
 	u_int m_uMaxNumRandomSegments;
 	u_int m_uMaxNumPoolThreads;
-
-	//RM_ThreadPool<RM_SR_WorkerThread, RM_File> m_xFileOpenWorkerPool;
-	//std::vector<RM_File*> m_xGroupFiles;//GUGU: mem leaks??
-	//u_int m_uSegmentIndexInFile;
-	//FileLimits m_xFileLimits;
 };
 
 #endif//CHALLENGE_RM_READER_PROCESS

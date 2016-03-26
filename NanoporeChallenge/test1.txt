@@ -1,0 +1,42 @@
+
+<SharedPoolNames>
+MessageQueue MessageQueue0
+MessageQueue MessageQueue1
+SharedBuffer SharedBuffer0
+SharedBuffer SharedBuffer1
+</SharedPoolNames>
+
+//----------------------
+//Writer Info
+MessageQueueOut MessageQueue0
+SharedBufferOut SharedBuffer0 
+NumWriteIterations 50
+
+//----------------------
+//FirstReaderInfo
+MessageQueueIn MessageQueue0
+SharedBufferIn SharedBuffer0
+OutputFileName FirstReader
+
+//----------------------
+//Second Reader
+MessageQueueIn MessageQueue0
+SharedBufferIn SharedBuffer0
+OutputFileName SecondReader
+NumStagingSegments 5
+NumMaxFilesPerGroup 100
+
+//----------------------
+//Third Process - writer
+MessageQueueIn MessageQueue0
+SharedBufferIn SharedBuffer0
+MessageQueueOut MessageQueue1
+SharedBufferOut SharedBuffer1
+
+
+//----------------------
+//Fourth Process - listening to process 3
+MessageQueueIn MessageQueue1
+SharedBufferIn SharedBuffer1
+OutputFileName ReaderTransformed
+

@@ -18,7 +18,7 @@
     <ClCompile Include="SecondReaderMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RM_OutputThread.cpp">
+    <ClCompile Include="..\Source\RM_OutputThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp">
@@ -26,9 +26,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RM_OutputThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SecondReader.h">
       <Filter>Header Files</Filter>
     </ClInclude>

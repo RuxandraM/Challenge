@@ -17,8 +17,8 @@ public:
 
 	RM_RETURN_CODE Platform_CreateNamedEvent(int iIndex, const char* szName)
 	{
-		char buff[33];
-		itostr(iIndex, buff);
+		char buff[32];
+		_itoa_s(iIndex, buff,10);
 		
 		std::string xName(szName);
 		xName.append(buff);
@@ -36,8 +36,8 @@ public:
 
 	void Platform_OpenNamedEvent(int iIndex, const char* szName)
 	{
-		char buff[33];
-		itostr(iIndex, buff);
+		char buff[32];
+		_itoa_s(iIndex, buff,10);
 
 		std::string xName(szName);
 		xName.append(buff);
@@ -49,7 +49,6 @@ public:
 
 	void Platform_Create()
 	{
-		//GUGU: manual reset to false?
 		m_xEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	}
 

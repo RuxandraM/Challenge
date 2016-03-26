@@ -13,8 +13,7 @@
 #include "ThirdReader.h"
 #include <vector>
 
-static int g_iLastTag = 0;
-static int g_iLastSegmentRead = 0;
+
 static int g_iProcessIndex = 3; //TODO: this is hardcoded; it should be sent at creation
 
 class RM_TR_ProcessingStagingThread : public RM_OutputStagingThread
@@ -42,7 +41,7 @@ public:
 
 		void ResetDirtyFlag() { m_bIsDirty = false; }
 		void SetDirty() { m_bIsDirty = true; }
-		bool IsDirty() { return m_bIsDirty; }
+		bool IsDirty() const { return m_bIsDirty; }
 	
 		
 		RM_SharedBuffer* GetDuplicateBuffer() const { return m_pxDuplicateBuffer; }
@@ -146,17 +145,32 @@ public:
 	RM_ThirdReader(int iProcessIndex, u_int uMaxNumRandomSegments, u_int uMaxNumPoolThreads, u_int uNumStagingSegments) :
 		RM_StagingReader(iProcessIndex,uMaxNumRandomSegments,uMaxNumPoolThreads,uNumStagingSegments) 
 	{
+		RM_InitData xInitData;
+		{
+			RM_SharedMemory xSharedMemory;
+			std::string xSharedInitDataName(SHARED_INIT_DATA_NAME);
+			void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_INIT_DATA_MAX_SIZE, xSharedInitDataName, m_iPID);
+			RM_SharedInitDataLayout xInitDataLayout;
+			xInitDataLayout.MapMemory(pSharedMemory);
+			xInitData = xInitDataLayout.GetInitData(m_iProcessIndex);
+		}
+
 		//the duplicate buffer
 		{
 			RM_SharedMemory xSharedMemory;
-			void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, TEXT(SHARED_DUPLICATE_MEMORY_NAME), m_iPID);
+			std::string xSharedBuffName(xInitData.pSharedBufferMemNameOut);
+			void* pSharedMemory = xSharedMemory.OpenMemory(RM_ACCESS_WRITE, SHARED_MEMORY_MAX_SIZE, xSharedBuffName, m_iPID);
+			
 			RM_SharedMemory xSharedMemoryLabels;
-			void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE,
-				TEXT(SHARED_DUPLICATE_MEMORY_LABESLS_NAME), m_iPID);
+			std::string xLablesObjName(xSharedBuffName);
+			xLablesObjName.append("Lables");
+			void* pSharedMemoryLabels = xSharedMemoryLabels.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, SHARED_MEMORY_LABESLS_MAX_SIZE, xLablesObjName, m_iPID);
 
 			m_xSharedBufferDuplicate.MapMemory(pSharedMemory, pSharedMemoryLabels);
+
 			const int iPID = _getpid();
-			m_xMessageManagerDuplicate.Initialise(iPID, MESSAGE_CHANNELS2_SHARED_MEMORY_NAME);
+			std::string xMsgQName(xInitData.pMessageQueueNameOut);
+			m_xMessageManagerDuplicate.Initialise(iPID, xMsgQName);
 		}
 	}
 
@@ -180,7 +194,7 @@ private:
 
 int main()
 {
-	WaitKeyPress(3);
+	//WaitKeyPress(3);
 	RM_ThirdReader<RM_TR_ProcessingStagingThread> xReader(
 		g_iProcessIndex, 
 		READER_MAX_RANDOM_SEGMENTS, 

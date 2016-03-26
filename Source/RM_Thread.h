@@ -9,7 +9,6 @@
 class RM_Thread
 {
 public:
-	//RM_Thread(HANDLE eventToWait) : m_xEventHandle(eventToWait){}
 	virtual ~RM_Thread() {};
 	
 	HANDLE Start()
@@ -40,12 +39,12 @@ public:
 
 protected:
 	int m_id;
-	//HANDLE m_xEventHandle;
 
 private:
 	HANDLE m_hThread;
 };
 
+//A thread that is sleeping, waiting for events. It wakes up, deals with the event, and goes back to sleep.
 class RM_EventThread : public RM_Thread
 {
 public:
@@ -72,7 +71,6 @@ public:
 		return 0;
 	}
 
-	virtual void ResetContext(void* pContext) {}
 	RM_Event* GetEvent() { return &m_xEvent; }
 	
 	void StartShutdown()
@@ -94,6 +92,8 @@ private:
 	RM_Event m_xEvent;
 };
 
+//small abstract class for a thread that signals a specific finish event when it's done.
+//the finish event is unique per WorkerListenerThread.
 class RM_WorkerListenerThread : public RM_EventThread
 {
 public:
@@ -114,8 +114,5 @@ private:
 	RM_Event m_xFinishEvent;
 };
 
-//class RM_WorkerListenerThread : public RM_Thread
-//{
-//};
 
 #endif//CHALLENGE_RM_THREAD

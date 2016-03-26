@@ -146,12 +146,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Source\RM_OutputThread.cpp" />
     <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp" />
-    <ClCompile Include="RM_OutputThread.cpp" />
     <ClCompile Include="SecondReaderMain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RM_OutputThread.h" />
     <ClInclude Include="SecondReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

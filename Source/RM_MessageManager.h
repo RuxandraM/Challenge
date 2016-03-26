@@ -6,8 +6,8 @@
 #include "RM_Event.h"
 #include "RM_Mutex.h"
 
-#define MESSAGE_CHANNELS1_SHARED_MEMORY_NAME "MemoryForMessages"
-#define MESSAGE_CHANNELS2_SHARED_MEMORY_NAME "MemoryForMessages_Channel2"
+#define MESSAGE_CHANNELS1_SHARED_MEMORY_NAME "MessageQueue0"
+#define MESSAGE_CHANNELS2_SHARED_MEMORY_NAME "MessageQueue1"
 
 struct ProcessToken
 {
@@ -154,10 +154,9 @@ public:
 	}
 
 private:
-	//ProcessToken* m_xProcessTokens[NUM_PROCESSES];
 	enum
 	{
-		MAX_NUM_ELEMENTS_IN_QUEUE = 64u,	//to be decided by the app, I should expose this parameter; GUGU
+		MAX_NUM_ELEMENTS_IN_QUEUE = 64u,	//to be decided by the app, I should expose this parameter;
 	};
 	RM_LinearLimitedQueue<MAX_NUM_ELEMENTS_IN_QUEUE,MessageData>* m_pxMessageQueues[NUM_PROCESSES];
 	RM_PlatformMutex* m_apxMutexes[NUM_PROCESSES];
@@ -173,30 +172,26 @@ template<int NUM_PROCESSES, typename MessageData>
 class RM_MessageManager
 {
 public:
-	void Create(u_int iPID, std::string pMessageChannelsObjName)
+	void Create(u_int iPID, std::string& xObjectName)
 	{
-		std::wstring wName(pMessageChannelsObjName.c_str(), pMessageChannelsObjName.c_str() + strlen(pMessageChannelsObjName.c_str()));
-		m_xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, GUGU_SIZE, (WCHAR*)wName.c_str(), iPID);
-		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, GUGU_SIZE,
-			(WCHAR*)wName.c_str(), iPID);
+		m_xSharedMemory.Create(RM_ACCESS_READ | RM_ACCESS_WRITE, MESSAGE_MANAGER_MEM_SIZE, xObjectName, iPID);
+		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, MESSAGE_MANAGER_MEM_SIZE, xObjectName, iPID);
 		m_xSharedMemoryLayout.Create(pSharedMemory);
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].CreateNamedEvent(u, pMessageChannelsObjName.c_str());
+			m_xEvents[u].CreateNamedEvent(u, xObjectName.c_str());
 		}
 	}
 
-	void Initialise(u_int iPID, std::string pMessageChannelsObjName)
+	void Initialise(u_int iPID, std::string& xObjectName)
 	{
-		std::wstring wName(pMessageChannelsObjName.c_str(), pMessageChannelsObjName.c_str() + strlen(pMessageChannelsObjName.c_str()));
-		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, GUGU_SIZE,
-			(WCHAR*)wName.c_str(), iPID);
+		void* pSharedMemory = m_xSharedMemory.OpenMemory(RM_ACCESS_WRITE | RM_ACCESS_READ, MESSAGE_MANAGER_MEM_SIZE, xObjectName, iPID);
 		m_xSharedMemoryLayout.MapMemory(pSharedMemory);
 
 		for (u_int u = 0; u < NUM_PROCESSES; ++u)
 		{
-			m_xEvents[u].OpenNamedEvent(u, pMessageChannelsObjName.c_str());
+			m_xEvents[u].OpenNamedEvent(u, xObjectName.c_str());
 		}
 	}
 
@@ -262,8 +257,8 @@ public:
 private:
 	enum
 	{
-		//MESSAGE_SHARED_MEMORY_MAX_SIZE = NUM_PROCESSES * sizeof(ProcessToken),
-		GUGU_SIZE = RM_MessageManagerSharedMemLayout<NUM_PROCESSES, RM_WToRMessageData>::MAX_MEM_SIZE
+		//how much memory each queue occupies. Given by the layout class.
+		MESSAGE_MANAGER_MEM_SIZE = RM_MessageManagerSharedMemLayout<NUM_PROCESSES, RM_WToRMessageData>::MAX_MEM_SIZE
 	};
 
 	RM_Event m_xEvents[NUM_PROCESSES];

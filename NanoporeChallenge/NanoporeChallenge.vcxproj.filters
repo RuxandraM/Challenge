@@ -18,10 +18,10 @@
     <ClCompile Include="..\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\RM_Thread.cpp">
+    <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp">
+    <ClCompile Include="..\Source\RM_OutputThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -72,6 +72,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\RM_SharedBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\RM_SharedInitData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\RM_OutputThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

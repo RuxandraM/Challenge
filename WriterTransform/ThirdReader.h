@@ -14,6 +14,6 @@
 //If the total number of files exceeds this, clamp the range and put 
 //min(READER_MAX_NUM_SEGMENTS_FILE, READER_MAX_RANDOM_SEGMENTS/READER_MAX_NUM_FILES). 
 
-#define READER_OUTPUT_NAME	"ThirdReaderOut"
+//#define READER_OUTPUT_NAME	"ThirdReaderOut"
 
 #endif//CHALLENGE_THIRD_READER_H_

@@ -147,17 +147,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp" />
+    <ClCompile Include="..\Source\RM_OutputThread.cpp" />
     <ClCompile Include="..\Source\RM_ReaderOutputThread.cpp" />
-    <ClCompile Include="..\Source\RM_Thread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\RM_Event.h" />
     <ClInclude Include="..\Source\RM_File.h" />
     <ClInclude Include="..\Source\RM_MessageManager.h" />
     <ClInclude Include="..\Source\RM_Mutex.h" />
+    <ClInclude Include="..\Source\RM_OutputThread.h" />
     <ClInclude Include="..\Source\RM_Process.h" />
     <ClInclude Include="..\Source\RM_ReaderOutputThread.h" />
     <ClInclude Include="..\Source\RM_ReaderProcess.h" />
+    <ClInclude Include="..\Source\RM_SharedInitData.h" />
     <ClInclude Include="..\Source\RM_SharedMemory.h" />
     <ClInclude Include="..\Source\RM_StagingBuffer.h" />
     <ClInclude Include="..\Source\RM_Thread.h" />
